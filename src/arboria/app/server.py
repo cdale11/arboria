@@ -26,6 +26,7 @@ from .auth import (
     session_is_valid,
     verify_password,
 )
+from .metadata import MetadataStore, WorldMetadata
 from .process_lock import DataDirectoryLock
 
 MAX_FAILED_LOGINS = 5
@@ -61,13 +62,21 @@ def _origin_is_allowed(request: Request) -> bool:
 
 def create_app() -> FastAPI:
     lock = DataDirectoryLock()
+    metadata_store = MetadataStore(lock.root)
+    world_metadata: WorldMetadata | None = None
+    clock = SimulationClock()
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+        nonlocal clock, world_metadata
         lock.acquire()
         try:
+            world_metadata = metadata_store.initialize_for_process_start()
+            clock = SimulationClock.from_state(world_metadata.clock)
             yield
         finally:
+            if world_metadata is not None:
+                metadata_store.save_clock(clock.state())
             lock.release()
 
     app = FastAPI(
@@ -78,7 +87,18 @@ def create_app() -> FastAPI:
     )
     static_dir = _static_dir()
     failed_logins: dict[str, list[float]] = {}
-    clock = SimulationClock()
+
+    def require_world_metadata() -> WorldMetadata:
+        nonlocal world_metadata
+        if world_metadata is None:
+            world_metadata = metadata_store.initialize_for_process_start()
+        return world_metadata
+
+    def save_clock_status() -> dict[str, float | int | bool]:
+        require_world_metadata()
+        status = clock.status()
+        metadata_store.save_clock(clock.state())
+        return clock_status_payload(status)
 
     @app.middleware("http")
     async def reject_cross_origin_mutations(
@@ -144,12 +164,13 @@ def create_app() -> FastAPI:
     def health() -> dict[str, Any]:
         return {
             "status": "ok",
-            "phase": "r1-clock-baseline",
+            "phase": "r1-world-metadata-baseline",
             "implemented": {
                 "server": True,
                 "static_frontend": static_dir.exists(),
                 "authentication": True,
                 "process_lock": True,
+                "world_metadata": True,
                 "simulation_clock": True,
                 "simulation": False,
                 "persistence": False,
@@ -164,6 +185,19 @@ def create_app() -> FastAPI:
     @app.get("/api/v1/auth/status")
     def auth_status(request: Request) -> dict[str, bool]:
         return {"authenticated": is_authenticated(request)}
+
+    @app.get("/api/v1/world")
+    def world_status(request: Request) -> Response:
+        if not is_authenticated(request):
+            return JSONResponse({"detail": "authentication required"}, status_code=401)
+        metadata = require_world_metadata()
+        return JSONResponse(
+            {
+                "world_id": metadata.world_id,
+                "timeline_id": metadata.timeline_id,
+                "schema_version": metadata.schema_version,
+            }
+        )
 
     def require_auth_and_csrf(request: Request) -> JSONResponse | None:
         if not is_authenticated(request):
@@ -235,27 +269,34 @@ def create_app() -> FastAPI:
     def get_clock(request: Request) -> Response:
         if not is_authenticated(request):
             return JSONResponse({"detail": "authentication required"}, status_code=401)
-        return JSONResponse(clock_status_payload(clock.status()))
+        return JSONResponse(save_clock_status())
 
     @app.post("/api/v1/clock/pause")
     def pause_clock(request: Request) -> Response:
         rejection = require_auth_and_csrf(request)
         if rejection is not None:
             return rejection
-        return JSONResponse(clock_status_payload(clock.pause()))
+        require_world_metadata()
+        payload = clock_status_payload(clock.pause())
+        metadata_store.save_clock(clock.state())
+        return JSONResponse(payload)
 
     @app.post("/api/v1/clock/resume")
     def resume_clock(request: Request) -> Response:
         rejection = require_auth_and_csrf(request)
         if rejection is not None:
             return rejection
-        return JSONResponse(clock_status_payload(clock.resume()))
+        require_world_metadata()
+        payload = clock_status_payload(clock.resume())
+        metadata_store.save_clock(clock.state())
+        return JSONResponse(payload)
 
     @app.post("/api/v1/clock/speed")
     async def set_clock_speed(request: Request) -> Response:
         rejection = require_auth_and_csrf(request)
         if rejection is not None:
             return rejection
+        require_world_metadata()
         payload = await request.json()
         if not isinstance(payload, dict):
             return JSONResponse({"detail": "invalid payload"}, status_code=400)
@@ -264,6 +305,7 @@ def create_app() -> FastAPI:
             next_status = clock.set_speed(speed)
         except (KeyError, TypeError, ValueError, ClockValidationError) as exc:
             return JSONResponse({"detail": str(exc)}, status_code=400)
+        metadata_store.save_clock(clock.state())
         return JSONResponse(clock_status_payload(next_status))
 
     if static_dir.exists():

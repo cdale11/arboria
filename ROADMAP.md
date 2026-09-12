@@ -34,20 +34,21 @@ Dependency: P0. This is the first playable release, not a skeleton server.
 - [x] Implement shared-password setup and session login/logout/status endpoints. Evidence: `docs/evidence/R1-auth-baseline.md`.
 - [x] Implement CSRF tokens, same-origin unsafe-request checks, and baseline failed-login throttling. Evidence: `docs/evidence/R1-auth-hardening.md`.
 - [x] Implement baseline data-directory process lock preventing two local server owners. Evidence: `docs/evidence/R1-process-lock.md`.
-- [ ] Implement authenticated single-world ownership metadata.
+- [x] Implement authenticated single-world ownership metadata. Evidence: `docs/evidence/R1-world-metadata.md`.
 - [ ] Implement bounded command envelope, request epoch, deduplication, validation, and execution receipts.
 - [ ] Implement bounded WebSocket/server-stream projection protocol and reconnect/resync behavior.
 
 #### Time and world lifecycle
 
 - [x] Implement server-owned in-memory 48× simulation clock with authenticated status, pause, resume, and speed controls. Evidence: `docs/evidence/R1-clock-baseline.md`.
-- [ ] Persist clock/world lifecycle state so restart resumes saved simulation time without wall-clock catch-up.
+- [x] Persist clock/world lifecycle state so restart resumes saved simulation time without wall-clock catch-up. Evidence: `docs/evidence/R1-world-metadata.md`.
 - [ ] Implement one-writer world loop consuming clock ticks at the documented 300-sim-second base tick.
 - [ ] Add lifecycle controls for pause/resume/save/restore/shutdown that remain serviceable while biological progression is paused.
 
 #### Persistence and recovery
 
-- [ ] Implement SQLite metadata store and immutable checkpoint generation layout.
+- [x] Implement SQLite metadata store. Evidence: `docs/evidence/R1-world-metadata.md`.
+- [ ] Implement immutable checkpoint generation layout.
 - [ ] Implement autosave, named saves, restore, export/import, and consistent world+learner checkpoint protocol.
 - [ ] Implement crash/disk-failure recovery and migration protocol.
 - [ ] Add atomic-save failure-injection tests.

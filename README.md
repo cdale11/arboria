@@ -4,7 +4,7 @@ A persistent, biologically grounded nursery and plant-shop simulation with proce
 
 ## Project status
 
-**Authenticated launcher/server baseline only. No game simulation, persistence, shop economy, companion, or real nursery interface has been implemented yet.** The documents in this repository define intended behavior and delivery gates; they are not evidence that the described features work. See [ROADMAP.md](ROADMAP.md) for implementation status.
+**Authenticated launcher/server baseline with durable world metadata only. No game simulation, checkpoint save/restore, shop economy, companion, or real nursery interface has been implemented yet.** The documents in this repository define intended behavior and delivery gates; they are not evidence that the described features work. See [ROADMAP.md](ROADMAP.md) for implementation status.
 
 ## The game
 
@@ -47,7 +47,7 @@ Python dependencies and Node must be installed through Conda. Browser packages u
 
 Authentication uses one shared local password, HttpOnly SameSite session cookies, a readable session-bound CSRF cookie for authenticated mutations, same-origin checks for unsafe requests, and a baseline failed-login throttle. First interactive run prompts for the password; unattended setup may use `ARBORIA_SETUP_PASSWORD` exactly once in a controlled local environment. On the host, open `http://localhost:8765`; on a trusted LAN, use the host's LAN address and port. `0.0.0.0` is a bind address, not the browser destination. Direct public-internet deployment is outside the first release's deployment contract.
 
-The current server exposes an authenticated in-memory simulation clock at `/api/v1/clock`, with CSRF-protected pause, resume, and speed controls. Clock state is not persisted yet, so a restart resumes from the current baseline's initial clock state until the save system is implemented.
+The current server exposes authenticated world metadata at `/api/v1/world` and a simulation clock at `/api/v1/clock`, with CSRF-protected pause, resume, and speed controls. World identity and clock state are stored in `world.sqlite3`; process restart keeps the world UUID, records a new timeline UUID, and resumes from the last saved clock state without wall-clock catch-up. Full checkpoint save/restore is not implemented yet.
 
 ## Saves and learning
 

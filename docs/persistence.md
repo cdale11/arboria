@@ -11,23 +11,32 @@
 
 ## 2. Data directory
 
-Planned layout, created only when implemented:
+Current partial layout:
 
 ```text
 var/
-  world.sqlite3          # Metadata, committed checkpoint references, receipts
+  world.sqlite3          # Implemented R1 metadata: world identity, timeline identity, clock state
+  auth/                  # Password hash and session storage, private permissions
+  server.lock            # OS-backed lock target
+```
+
+Planned additions:
+
+```text
+var/
+  world.sqlite3          # Later also stores committed checkpoint references and receipts
   checkpoints/<id>/      # Immutable world/learner arrays and manifest
   exports/               # User-requested backup archives
-  auth/                  # Password hash and session storage, private permissions
   logs/                  # Bounded operational logs; no secrets
-  server.lock            # OS-backed lock target
 ```
 
 `ARBORIA_DATA_DIR` overrides the root. Test fixtures use isolated temporary directories. Never load executable pickle/joblib content from a save. Numerical arrays use a non-executable format with explicit shapes/dtypes and `allow_pickle=False` where applicable.
 
 ## 3. Versioned metadata
 
-Minimum SQLite entities:
+Implemented R1 metadata currently records one `worlds` row with world UUID, process-start timeline UUID, schema version, optional active checkpoint ID, creation/update timestamps, and clock `sim_time_seconds`, `speed`, and `paused` fields. Startup keeps the world UUID, rotates the timeline UUID, and loads the saved clock state without adding elapsed wall time while the server was stopped.
+
+Minimum full SQLite entities:
 
 | Entity | Required fields |
 | --- | --- |

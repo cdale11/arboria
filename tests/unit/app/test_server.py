@@ -31,10 +31,11 @@ def test_health_reports_current_implementation_scope(
     assert response.status_code == 200
     payload = response.json()
     assert payload["status"] == "ok"
-    assert payload["phase"] == "r1-clock-baseline"
+    assert payload["phase"] == "r1-world-metadata-baseline"
     assert payload["implemented"]["server"] is True
     assert payload["implemented"]["authentication"] is True
     assert payload["implemented"]["process_lock"] is True
+    assert payload["implemented"]["world_metadata"] is True
     assert payload["implemented"]["simulation"] is False
     assert payload["implemented"]["persistence"] is False
 
@@ -192,3 +193,29 @@ def test_clock_rejects_invalid_speed(monkeypatch: MonkeyPatch, tmp_path: Path) -
     )
 
     assert response.status_code == 400
+
+
+def test_world_metadata_and_clock_survive_restart(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    with TestClient(create_app()) as client:
+        csrf = login(client)
+        world = client.get("/api/v1/world").json()
+        paused = client.post("/api/v1/clock/pause", headers={CSRF_HEADER_NAME: csrf})
+        assert paused.status_code == 200
+        changed = client.post(
+            "/api/v1/clock/speed", json={"speed": 12.0}, headers={CSRF_HEADER_NAME: csrf}
+        )
+        assert changed.status_code == 200
+
+    with TestClient(create_app()) as restarted:
+        login(restarted)
+        restarted_world = restarted.get("/api/v1/world").json()
+        restarted_clock = restarted.get("/api/v1/clock").json()
+
+    assert restarted_world["world_id"] == world["world_id"]
+    assert restarted_world["timeline_id"] != world["timeline_id"]
+    assert restarted_world["schema_version"] == 1
+    assert restarted_clock["paused"] is True
+    assert restarted_clock["speed"] == 12.0

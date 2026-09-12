@@ -28,14 +28,47 @@ class ClockStatus:
     year: int
 
 
+@dataclass(frozen=True)
+class ClockState:
+    sim_time_seconds: float
+    speed: float
+    paused: bool
+
+
 class SimulationClock:
     """Convert monotonic server runtime into deterministic simulated time."""
 
-    def __init__(self, *, now: float | None = None, speed: float = DEFAULT_SPEED) -> None:
-        self._sim_time_seconds = 0.0
+    def __init__(
+        self,
+        *,
+        now: float | None = None,
+        speed: float = DEFAULT_SPEED,
+        sim_time_seconds: float = 0.0,
+        paused: bool = False,
+    ) -> None:
+        if sim_time_seconds < 0.0:
+            raise ClockValidationError("Simulation time cannot be negative.")
+        self._sim_time_seconds = float(sim_time_seconds)
         self._speed = self._validate_speed(speed)
-        self._paused = False
+        self._paused = paused
         self._last_monotonic = self._now(now)
+
+    @classmethod
+    def from_state(cls, state: ClockState, *, now: float | None = None) -> SimulationClock:
+        return cls(
+            now=now,
+            speed=state.speed,
+            sim_time_seconds=state.sim_time_seconds,
+            paused=state.paused,
+        )
+
+    def state(self, *, now: float | None = None) -> ClockState:
+        self._advance(now)
+        return ClockState(
+            sim_time_seconds=self._sim_time_seconds,
+            speed=self._speed,
+            paused=self._paused,
+        )
 
     def status(self, *, now: float | None = None) -> ClockStatus:
         self._advance(now)

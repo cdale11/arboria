@@ -206,3 +206,24 @@ Records delivered work and actual evidence. Planned features belong in [ROADMAP.
 ### Limitations
 
 - No implementation behavior changed.
+
+## 2026-09-13 — R1 world-metadata baseline
+
+### Added
+
+- Added `MetadataStore`, a SQLite metadata baseline for one local world under `ARBORIA_DATA_DIR/world.sqlite3`.
+- Persisted world UUID, fresh process-start timeline UUID, schema version, and simulation clock state.
+- Added authenticated `/api/v1/world` status endpoint.
+- Updated clock startup/shutdown and clock routes so restart resumes saved clock state without wall-clock catch-up.
+- Added unit tests for metadata creation, timeline rotation, durable SQLite settings, clock state persistence, and server restart behavior.
+- Updated README, roadmap, persistence documentation, and evidence documentation.
+
+### Evidence and verification
+
+- `python -m pytest tests/unit/app/test_metadata.py tests/unit/app/test_server.py tests/unit/sim/test_clock.py` passed with 20 tests and the documented FastAPI/Starlette `TestClient` deprecation warning.
+- `ruff check src/arboria/app/metadata.py src/arboria/app/server.py src/arboria/sim/clock.py tests/unit/app/test_metadata.py tests/unit/app/test_server.py tests/unit/sim/test_clock.py` passed.
+- `mypy src tests/unit` passed.
+
+### Limitations
+
+- Metadata persistence only: immutable checkpoints, autosave, named saves, restore, export/import, command receipts, migrations, biological state, and the world tick loop remain unimplemented.

@@ -1,6 +1,6 @@
 import pytest
 
-from arboria.sim.clock import DEFAULT_SPEED, ClockValidationError, SimulationClock
+from arboria.sim.clock import DEFAULT_SPEED, ClockState, ClockValidationError, SimulationClock
 
 
 def test_clock_advances_at_default_speed() -> None:
@@ -45,3 +45,15 @@ def test_clock_rejects_invalid_speed() -> None:
     clock = SimulationClock(now=0.0)
     with pytest.raises(ClockValidationError):
         clock.set_speed(145.0, now=1.0)
+
+
+def test_clock_restores_from_persisted_state_without_wall_clock_catchup() -> None:
+    clock = SimulationClock.from_state(
+        ClockState(sim_time_seconds=500.0, speed=12.0, paused=True), now=100.0
+    )
+
+    status = clock.status(now=200.0)
+
+    assert status.sim_time_seconds == 500.0
+    assert status.speed == 12.0
+    assert status.paused is True
