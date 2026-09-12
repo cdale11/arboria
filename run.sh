@@ -42,10 +42,12 @@ export ARBORIA_STATIC_DIR="$script_dir/web/dist"
 export ARBORIA_HOST="$host"
 export ARBORIA_PORT="$port"
 export PYTHONPATH="$script_dir/src${PYTHONPATH:+:$PYTHONPATH}"
+export ARBORIA_DATA_DIR="${ARBORIA_DATA_DIR:-$script_dir/var}"
 
 printf 'Arboria using Conda environment: %s\n' "$CONDA_PREFIX"
 printf 'Node: %s (%s)\n' "$(node --version)" "$(command -v node)"
 printf 'npm: %s (%s)\n' "$(npm --version)" "$(command -v npm)"
+python -m arboria.app.auth_setup
 
 if [[ ! -d "$script_dir/web/node_modules" ]]; then
   printf '%s\n' "Installing locked browser dependencies with npm ci..."

@@ -84,3 +84,26 @@ Records delivered work and actual evidence. Planned features belong in [ROADMAP.
 ### Limitations
 
 - Launcher/server baseline only: authentication, world ownership, persistence, simulation, economy, companion, e2e browser testing, offline repeat-start evidence, process lock, and failure-injection gates remain incomplete.
+
+## 2026-09-13 — R1 authentication baseline
+
+### Added
+
+- Added shared-password setup integrated into `run.sh`, with interactive first-run prompts or controlled noninteractive `ARBORIA_SETUP_PASSWORD` setup.
+- Added local PBKDF2-HMAC-SHA256 password hashing, hashed session-token storage, HttpOnly SameSite session cookies, auth status/login/logout endpoints, and protected root-page behavior.
+- Added auth-focused unit tests using isolated temporary data directories.
+- Updated README, roadmap, architecture notes, and evidence documentation to reflect baseline authentication without claiming the world simulation exists.
+
+### Evidence and verification
+
+- `python -m pytest tests/unit` passed with 6 tests and the documented FastAPI/Starlette `TestClient` deprecation warning.
+- `ruff check .` passed.
+- `mypy src tests/unit` passed.
+- `npm --prefix web run check` passed.
+- `npm --prefix web run test` passed.
+- `npm --prefix web run build` passed.
+- A smoke run of `ARBORIA_HOST=127.0.0.1 ARBORIA_PORT=8767 ARBORIA_DATA_DIR=<tmp> ARBORIA_SETUP_PASSWORD=<temporary> ./run.sh` configured a password, served `/health`, and did not store the plaintext password.
+
+### Limitations
+
+- Authentication baseline only: CSRF/origin hardening, login rate limiting, Secure-cookie HTTPS behavior, process lock, world ownership, command authorization, persistence, simulation, economy, companion, and e2e browser testing remain incomplete.

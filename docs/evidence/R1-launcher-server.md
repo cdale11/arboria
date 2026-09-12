@@ -23,7 +23,9 @@ ARBORIA_PORT=8766 ./run.sh
 python health probe against http://127.0.0.1:8766/health
 ```
 
-## Expected current health payload shape
+## Historical health payload shape for this slice
+
+This was the expected payload before the later authentication baseline changed the phase and authentication status.
 
 ```json
 {

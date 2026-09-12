@@ -128,9 +128,9 @@ Stream messages carry `world_id`, `timeline_id`, `revision`, `base_revision`, `k
 
 ## 6. Authentication and single-instance operation
 
-First-run password input uses hidden terminal input with confirmation. Noninteractive startup without configured credentials fails clearly. Store a salted password hash using a vetted available implementation, with measured work factor. Do not invent cryptography. Session tokens come from a cryptographic RNG separate from simulation RNG; store token hashes server-side, expire sessions, and never put tokens in URLs.
+Current baseline first-run password input uses hidden terminal input with confirmation through `run.sh`; noninteractive setup may use `ARBORIA_SETUP_PASSWORD`, and noninteractive startup without configured credentials fails clearly. The current implementation stores a salted PBKDF2-HMAC-SHA256 hash with 600,000 iterations under `var/auth/auth.json`, stores only session-token SHA-256 digests in `var/auth/sessions.json`, expires sessions after seven days, and never puts tokens in URLs. Future hardening may replace PBKDF2 if a stronger vetted password-hashing package is selected under policy.
 
-Cookies are HttpOnly and SameSite, with Secure required for HTTPS deployments. Validate Origin/CSRF protection for mutations and WebSocket upgrades; rate-limit login attempts and command payloads. Same-origin frontend/API is the default. Plain LAN HTTP does not encrypt traffic; document the deployment boundary and optional TLS reverse-proxy contract before supporting remote exposure.
+Cookies are HttpOnly and SameSite. Secure cookies are required for HTTPS deployments but are not active on the current LAN HTTP baseline. Validate Origin/CSRF protection for mutations and WebSocket upgrades; rate-limit login attempts and command payloads before exposing real state-changing game actions. Same-origin frontend/API is the default. Plain LAN HTTP does not encrypt traffic; document the deployment boundary and optional TLS reverse-proxy contract before supporting remote exposure.
 
 Acquire an OS-backed lock on the data directory before opening the mutable world. A second server fails with the owner/port diagnostic rather than creating a second writer. Release on exit; do not rely solely on a stale PID file. Graceful shutdown stops admission, finishes the current safe boundary, checkpoints, and exits.
 
