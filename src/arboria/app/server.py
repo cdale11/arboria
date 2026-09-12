@@ -13,6 +13,8 @@ from fastapi import FastAPI, Request, Response, status
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
+from arboria.sim.clock import ClockValidationError, SimulationClock, clock_status_payload
+
 from .auth import (
     COOKIE_NAME,
     CSRF_COOKIE_NAME,
@@ -76,6 +78,7 @@ def create_app() -> FastAPI:
     )
     static_dir = _static_dir()
     failed_logins: dict[str, list[float]] = {}
+    clock = SimulationClock()
 
     @app.middleware("http")
     async def reject_cross_origin_mutations(
@@ -141,12 +144,13 @@ def create_app() -> FastAPI:
     def health() -> dict[str, Any]:
         return {
             "status": "ok",
-            "phase": "r1-auth-baseline",
+            "phase": "r1-clock-baseline",
             "implemented": {
                 "server": True,
                 "static_frontend": static_dir.exists(),
                 "authentication": True,
                 "process_lock": True,
+                "simulation_clock": True,
                 "simulation": False,
                 "persistence": False,
                 "companion": False,
@@ -160,6 +164,15 @@ def create_app() -> FastAPI:
     @app.get("/api/v1/auth/status")
     def auth_status(request: Request) -> dict[str, bool]:
         return {"authenticated": is_authenticated(request)}
+
+    def require_auth_and_csrf(request: Request) -> JSONResponse | None:
+        if not is_authenticated(request):
+            return JSONResponse({"detail": "authentication required"}, status_code=401)
+        if not csrf_is_authenticated(request):
+            return JSONResponse(
+                {"detail": "invalid csrf token"}, status_code=status.HTTP_403_FORBIDDEN
+            )
+        return None
 
     @app.post("/api/v1/auth/login")
     async def login(request: Request) -> Response:
@@ -209,15 +222,49 @@ def create_app() -> FastAPI:
 
     @app.post("/api/v1/auth/logout")
     def logout(request: Request) -> Response:
-        if not csrf_is_authenticated(request):
-            return JSONResponse(
-                {"detail": "invalid csrf token"}, status_code=status.HTTP_403_FORBIDDEN
-            )
+        rejection = require_auth_and_csrf(request)
+        if rejection is not None:
+            return rejection
         destroy_session(request.cookies.get(COOKIE_NAME))
         response = JSONResponse({"authenticated": False})
         response.delete_cookie(COOKIE_NAME)
         response.delete_cookie(CSRF_COOKIE_NAME)
         return response
+
+    @app.get("/api/v1/clock")
+    def get_clock(request: Request) -> Response:
+        if not is_authenticated(request):
+            return JSONResponse({"detail": "authentication required"}, status_code=401)
+        return JSONResponse(clock_status_payload(clock.status()))
+
+    @app.post("/api/v1/clock/pause")
+    def pause_clock(request: Request) -> Response:
+        rejection = require_auth_and_csrf(request)
+        if rejection is not None:
+            return rejection
+        return JSONResponse(clock_status_payload(clock.pause()))
+
+    @app.post("/api/v1/clock/resume")
+    def resume_clock(request: Request) -> Response:
+        rejection = require_auth_and_csrf(request)
+        if rejection is not None:
+            return rejection
+        return JSONResponse(clock_status_payload(clock.resume()))
+
+    @app.post("/api/v1/clock/speed")
+    async def set_clock_speed(request: Request) -> Response:
+        rejection = require_auth_and_csrf(request)
+        if rejection is not None:
+            return rejection
+        payload = await request.json()
+        if not isinstance(payload, dict):
+            return JSONResponse({"detail": "invalid payload"}, status_code=400)
+        try:
+            speed = float(payload["speed"])
+            next_status = clock.set_speed(speed)
+        except (KeyError, TypeError, ValueError, ClockValidationError) as exc:
+            return JSONResponse({"detail": str(exc)}, status_code=400)
+        return JSONResponse(clock_status_payload(next_status))
 
     if static_dir.exists():
         assets_dir = static_dir / "assets"

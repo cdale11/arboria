@@ -47,6 +47,8 @@ Python dependencies and Node must be installed through Conda. Browser packages u
 
 Authentication uses one shared local password, HttpOnly SameSite session cookies, a readable session-bound CSRF cookie for authenticated mutations, same-origin checks for unsafe requests, and a baseline failed-login throttle. First interactive run prompts for the password; unattended setup may use `ARBORIA_SETUP_PASSWORD` exactly once in a controlled local environment. On the host, open `http://localhost:8765`; on a trusted LAN, use the host's LAN address and port. `0.0.0.0` is a bind address, not the browser destination. Direct public-internet deployment is outside the first release's deployment contract.
 
+The current server exposes an authenticated in-memory simulation clock at `/api/v1/clock`, with CSRF-protected pause, resume, and speed controls. Clock state is not persisted yet, so a restart resumes from the current baseline's initial clock state until the save system is implemented.
+
 ## Saves and learning
 
 The planned default data directory is `./var/`, relative to the repository root, overridable with `ARBORIA_DATA_DIR`. Autosaves, named snapshots, restore, and export/import will include biology, shop state, RNG state, training data, model weights, optimizer state, companion preferences, and rule versions. Live database copying is not a supported backup procedure; export will create a consistent archive. See [persistence](docs/persistence.md).

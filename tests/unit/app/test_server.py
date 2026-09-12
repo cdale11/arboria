@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import cast
 
 from fastapi.testclient import TestClient
 from pytest import MonkeyPatch
@@ -30,7 +31,7 @@ def test_health_reports_current_implementation_scope(
     assert response.status_code == 200
     payload = response.json()
     assert payload["status"] == "ok"
-    assert payload["phase"] == "r1-auth-baseline"
+    assert payload["phase"] == "r1-clock-baseline"
     assert payload["implemented"]["server"] is True
     assert payload["implemented"]["authentication"] is True
     assert payload["implemented"]["process_lock"] is True
@@ -131,3 +132,63 @@ def test_password_hash_stays_private(monkeypatch: MonkeyPatch, tmp_path: Path) -
     stored = password_file(tmp_path).read_text(encoding="utf-8")
     assert "correct horse battery staple" not in stored
     assert "pbkdf2_sha256" in stored
+
+
+def login(client: TestClient) -> str:
+    accepted = client.post(
+        "/api/v1/auth/login", json={"password": "correct horse battery staple"}
+    )
+    assert accepted.status_code == 200
+    csrf = accepted.cookies[CSRF_COOKIE_NAME]
+    return cast(str, csrf)
+
+
+def test_clock_requires_authentication(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    client = TestClient(create_app())
+
+    response = client.get("/api/v1/clock")
+
+    assert response.status_code == 401
+
+
+def test_clock_pause_resume_and_speed_require_csrf(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    client = TestClient(create_app())
+    csrf = login(client)
+
+    first = client.get("/api/v1/clock")
+    assert first.status_code == 200
+    assert first.json()["speed"] == 48.0
+    assert first.json()["paused"] is False
+
+    rejected = client.post("/api/v1/clock/pause")
+    assert rejected.status_code == 403
+
+    paused = client.post("/api/v1/clock/pause", headers={CSRF_HEADER_NAME: csrf})
+    assert paused.status_code == 200
+    assert paused.json()["paused"] is True
+
+    changed = client.post(
+        "/api/v1/clock/speed", json={"speed": 12.0}, headers={CSRF_HEADER_NAME: csrf}
+    )
+    assert changed.status_code == 200
+    assert changed.json()["speed"] == 12.0
+
+    resumed = client.post("/api/v1/clock/resume", headers={CSRF_HEADER_NAME: csrf})
+    assert resumed.status_code == 200
+    assert resumed.json()["paused"] is False
+
+
+def test_clock_rejects_invalid_speed(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    client = TestClient(create_app())
+    csrf = login(client)
+
+    response = client.post(
+        "/api/v1/clock/speed", json={"speed": 0.0}, headers={CSRF_HEADER_NAME: csrf}
+    )
+
+    assert response.status_code == 400

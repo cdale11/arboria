@@ -25,7 +25,7 @@ Dependency: P0. This is the first playable release, not a skeleton server.
 - [ ] Select and lock browser e2e tooling compatible with the Conda/npm policy.
 - [x] Deliver baseline one-script build/run for the current static server page; full R1 launcher gates still require authentication, persistence, migrations, offline repeat-start evidence, and failure-injection tests.
 - [ ] Password-protected single world at configurable `0.0.0.0:8765`, owner-device concurrency, bounded command/stream protocol. Baseline shared-password/session auth, CSRF tokens, origin checks, and login throttling are implemented; world ownership and command/stream protocol remain incomplete.
-- [ ] Continuous 48× default clock, pause/speed controls, no progression during server downtime.
+- [ ] Continuous 48× default clock, pause/speed controls, no progression during server downtime. Baseline in-memory authenticated clock controls are implemented; persistence and integration with world ticks remain incomplete.
 - [ ] Organ topology, causal vegetative development, light/carbon/water/NPK physiology, root-zone environment, damage/death, explicit species coverage.
 - [ ] Six proposed representative species in outdoor/greenhouse zones, with source-backed or explicitly provisional parameter metadata and reviewed scenarios.
 - [ ] Procedural 2.5D nursery and usable desktop/touch inspection/care/shop controls.

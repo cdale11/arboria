@@ -154,3 +154,26 @@ Records delivered work and actual evidence. Planned features belong in [ROADMAP.
 ### Limitations
 
 - Process-lock baseline only: no SQLite persistence, checkpointing, migration, save/restore, world tick loop, economy, companion, or command streaming exists yet.
+
+## 2026-09-13 — R1 simulation-clock baseline
+
+### Added
+
+- Added `SimulationClock`, an in-memory server-owned clock with default 48x speed, pause/resume, speed validation, and calendar-derived status fields.
+- Added authenticated `/api/v1/clock` status endpoint and CSRF-protected pause/resume/speed endpoints.
+- Added deterministic clock unit tests and API tests for auth/CSRF/speed behavior.
+- Updated README, roadmap, health status, and evidence documentation.
+
+### Evidence and verification
+
+- `python -m pytest tests/unit` passed with 17 tests and the documented FastAPI/Starlette `TestClient` deprecation warning.
+- `ruff check .` passed.
+- `mypy src tests/unit` passed.
+- `npm --prefix web run check` passed.
+- `npm --prefix web run test` passed.
+- `npm --prefix web run build` passed.
+- A smoke run of `ARBORIA_HOST=127.0.0.1 ARBORIA_PORT=8767 ARBORIA_DATA_DIR=<tmp> ARBORIA_SETUP_PASSWORD=<temporary> ./run.sh` served `/health` with phase `r1-clock-baseline` and `simulation_clock: true`.
+
+### Limitations
+
+- Clock baseline only: state is not persisted, no biological tick loop consumes it, no command queue exists, and no frontend clock controls exist yet.
