@@ -18,6 +18,14 @@ This is an incident log, not a list of imagined failures. Add entries when an ac
 - **Correction:** Hardware inspection was rerun separately; the repository's unborn state was recognized.
 - **Prevention:** Check for a valid `HEAD` before history-dependent operations in an empty repository. Do not interpret an expected absence of history as failure of unrelated checks.
 
+## M-003 — Conda npm invoked NVM node through `PATH` (2026-09-12)
+
+- **Observed:** `$CONDA_PREFIX/bin/npm --prefix web install --package-lock-only` emitted an engine warning showing Node `v24.19.0`, even though `$CONDA_PREFIX/bin/node` was `v26.5.1`.
+- **Cause:** The inherited shell `PATH` put an NVM Node directory before the Conda environment. The Conda npm executable used `/usr/bin/env node`, so it found the wrong Node binary.
+- **Impact:** A package-lock generation command ran with the wrong Node binary. No runtime code or application state was changed.
+- **Correction:** Regenerate npm locks and run npm checks with `PATH="$CONDA_PREFIX/bin:$PATH"` after activating `arboria`.
+- **Prevention:** For any Node/npm command, use activated `arboria` plus a `PATH` prefix that makes `$CONDA_PREFIX/bin/node` the first `node`. Verify `node -v`, `npm -v`, and `command -v node` before dependency or frontend checks.
+
 ## Anticipated risks — not observed incidents
 
 These are design-review reminders, not claims that errors have happened:

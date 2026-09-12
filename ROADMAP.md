@@ -21,7 +21,8 @@ Dependency: P0. This is the first playable release, not a skeleton server.
 
 ### Scope
 
-- [ ] Resolve and lock supported Conda Python/numerical/web/test stack and environment-local npm frontend stack.
+- [x] Resolve and lock the baseline Conda Python/numerical/server/test stack and environment-local npm TypeScript/Vite/Three.js/Vitest stack.
+- [ ] Select and lock browser e2e tooling compatible with the Conda/npm policy.
 - [ ] Deliver one-script install/build/run and offline repeat start on target Linux x86-64.
 - [ ] Password-protected single world at configurable `0.0.0.0:8765`, owner-device concurrency, bounded command/stream protocol.
 - [ ] Continuous 48× default clock, pause/speed controls, no progression during server downtime.

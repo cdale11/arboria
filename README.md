@@ -4,7 +4,7 @@ A persistent, biologically grounded nursery and plant-shop simulation with proce
 
 ## Project status
 
-**Planning specification only. No game, launcher, dependency lockfiles, or automated test suite has been implemented yet.** The documents in this repository define intended behavior and delivery gates; they are not evidence that the described features work. See [ROADMAP.md](ROADMAP.md) for implementation status.
+**Dependency baseline only. No game, launcher, server, simulation, browser app, or automated application test suite has been implemented yet.** The documents in this repository define intended behavior and delivery gates; they are not evidence that the described features work. See [ROADMAP.md](ROADMAP.md) for implementation status.
 
 ## The game
 
@@ -43,7 +43,7 @@ The first playable release will provide one command from the repository root:
 
 **That script does not exist yet. Do not interpret this as a currently runnable instruction.** It will locate Conda, activate `arboria`, synchronize pinned dependencies, build browser assets when inputs change, migrate/validate state, and start the server. Missing Conda will result in actionable instructions rather than an unrequested system-wide installer.
 
-Python dependencies and Node must be installed through Conda. Browser packages use pinned npm dependencies and `npm ci` within activated `arboria`. No pip fallback is authorized. Runtime operation after initial installation/build must not require internet access.
+Python dependencies and Node must be installed through Conda. Browser packages use pinned npm dependencies and `npm ci` within activated `arboria`. No pip fallback is authorized. Runtime operation after initial installation/build must not require internet access. The current direct dependency policy is recorded in [dependency policy](docs/dependencies.md).
 
 First run will require interactive local password setup or a documented protected configuration mechanism for unattended startup. Passwords will never be passed as command-line arguments or committed. On the host, open `http://localhost:8765`; on a trusted LAN, use the host's LAN address and port. `0.0.0.0` is a bind address, not the browser destination. Direct public-internet deployment is outside the first release's deployment contract.
 
@@ -62,13 +62,14 @@ conda activate arboria
 
 This path is specific to the inspected development machine. The launcher must discover Conda rather than hard-code that path.
 
-There are no application tests to run yet. The first release must supply the verification commands and suites described in [testing](docs/testing.md), then update this README with actually verified commands.
+There are no application tests to run yet. The first release must supply the verification commands and suites described in [testing](docs/testing.md), then update this README with actually verified commands. Dependency smoke checks are recorded in `CHANGELOG.md`.
 
 ## Specification index
 
 - [Decision register](docs/decisions.md): confirmed choices, engineering defaults, unresolved release gates.
 - [Game design](docs/game-design.md): interaction, calendar, shop, autonomy, and release coverage.
 - [Architecture](docs/architecture.md): module ownership, data structures, tick order, API, concurrency, launch.
+- [Dependency policy](docs/dependencies.md): selected Conda/npm direct dependencies and lock regeneration.
 - [Biology](docs/biology.md): units, numerical contracts, functional–structural modeling, evidence.
 - [Learning](docs/learning.md): online models, training, authority, emergence, rule invention.
 - [Persistence](docs/persistence.md): transactions, complete checkpoints, recovery, migrations.

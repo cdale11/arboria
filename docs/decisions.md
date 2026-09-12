@@ -28,7 +28,7 @@ Date of baseline: 2026-09-12. Status labels: **confirmed** = user choice; **adop
 | E01 | 1 sim day / 30 real minutes; speed 48× | User delegated selection; roughly weekly years. Balance review can change default with a decision record |
 | E02 | Bind `0.0.0.0:8765` | Previously proposed and accepted single-shop option; configurable |
 | E03 | Python + TypeScript, FastAPI, SQLite, Three.js | Scientific development and procedural web presentation without a large game engine |
-| E04 | Conda numerical stack, optional Numba | Compile measured hot loops; versions resolved in R1 |
+| E04 | Conda numerical stack, optional Numba | Compile measured hot loops; baseline direct dependencies resolved in R1 |
 | E05 | NumPy-sized small online networks initially | No large-model runtime requirement; retain explicit checkpointable optimizers |
 | E06 | 5 simulated minutes per base tick | At default speed, 6.25 real seconds per tick; renderer runs independently |
 | E07 | 30 sim minutes between manager planning cycles | Emergency checks every base tick; commands can run at next tick |
@@ -40,7 +40,7 @@ Date of baseline: 2026-09-12. Status labels: **confirmed** = user choice; **adop
 
 ## Gates, not permission to invent
 
-1. **Dependency resolution (R1):** prove the Python/NumPy/Numba/Node combination is available via allowed managers. A supported Python minor may replace the preexisting 3.14. Record the lock and compatibility result. Ask if an essential dependency cannot be installed under policy.
+1. **Dependency resolution (R1):** baseline Python/NumPy/Numba/Node packages are available via allowed managers and locked for Linux x86-64. Remaining dependency work includes browser e2e tooling selection, implementation-specific additions, and keeping locks synchronized. Ask if an essential dependency cannot be installed under policy.
 2. **Scientific parameter provenance (every species release):** inspect and cite trustworthy sources, distinguish observation from fit, and document uncertainty. Baseline equations here are modeling contracts, not empirical parameter tables.
 3. **Starter species package (R1):** proposed representatives are *Acer palmatum*, *Ficus microcarpa*, *Crassula ovata*, *Ocimum basilicum*, *Solanum lycopersicum*, and *Chlorophytum comosum*. Deliver all six with honest R1 process coverage, or ask before substituting scope. Cultivar and CAM/C3 distinctions must be explicit.
 4. **Performance (R1 and R6):** measure target hardware. If fidelity and scale cannot both pass, report the bottleneck and ask before reducing promised behavior or capacity.

@@ -30,3 +30,33 @@ Records delivered work and actual evidence. Planned features belong in [ROADMAP.
 - Biological equations are modeling contracts; species coefficients have not been sourced or scientifically calibrated.
 - Performance budgets and learning improvement thresholds are provisional acceptance targets, not achieved measurements.
 - No project-wide software license has been selected.
+
+## 2026-09-12 — R1 dependency baseline
+
+### Added
+
+- Added `environment.yml` with direct Conda requirements for Python 3.13, NumPy, Numba, FastAPI, Uvicorn, pytest, Hypothesis, mypy, Ruff, and Node.js.
+- Added `conda-linux-64.lock`, generated from the installed `arboria` environment with `conda list --explicit`.
+- Added `web/package.json` and `web/package-lock.json` with pinned TypeScript, Vite, Three.js, Vitest, jsdom, and type dependencies.
+- Added minimal frontend smoke files so the locked TypeScript/Vite/Vitest toolchain can be verified without claiming gameplay exists.
+- Added `pyproject.toml` for initial Python lint/type/test configuration and `.gitignore` for runtime state, credentials, caches, frontend builds, and `node_modules`.
+- Added `docs/dependencies.md` and `docs/evidence/R1-dependencies.md` documenting dependency policy, commands, evidence, and limitations.
+- Updated `README.md`, `ROADMAP.md`, architecture decisions, and `MISTAKES.md` for the dependency baseline.
+
+### Evidence and verification
+
+- Conda dry run resolved the direct stack from allowed default channels without pip or system packages.
+- Conda install completed, moving `arboria` from Python 3.14.7 to Python 3.13.15 to satisfy the numerical/server/test stack.
+- npm lock/install were rerun with `PATH="$CONDA_PREFIX/bin:$PATH"`, verifying Conda Node `v26.5.1` and npm `11.17.0`.
+- `npm --prefix web run check` passed.
+- `npm --prefix web run test` passed with 1 Vitest/jsdom smoke test.
+- `npm --prefix web run build` passed with Vite 7.1.7.
+- Python smoke imported NumPy 2.4.6, Numba 0.66.0, FastAPI 0.138.0, Uvicorn 0.52.4, pytest 9.0.3, and Hypothesis 6.165.10; a trivial Numba `njit` function compiled and ran.
+- `ruff check .` passed.
+
+### Limitations
+
+- Dependency baseline only: no game server, launcher, simulation, persistence, economy, companion logic, real UI, or application test suite exists yet.
+- Browser e2e tooling is intentionally not selected yet; `web/package.json` keeps `test:e2e` failing until a real suite is added.
+- npm warned that `esbuild` has an install script not covered by npm's `allowScripts` review flow. The current build passes, but launcher/setup work must choose an explicit policy.
+- Locks are Linux x86-64/local-browser-stack focused; cross-platform support is not claimed.

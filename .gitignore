@@ -1,0 +1,23 @@
+# Runtime state, credentials, generated saves, and local caches
+var/
+*.sqlite3
+*.sqlite3-*
+*.db
+
+# Python local artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Frontend local artifacts
+web/node_modules/
+web/dist/
+web/.vite/
+
+# Environment and editor noise
+.env
+.env.*
+!.env.example
+.DS_Store

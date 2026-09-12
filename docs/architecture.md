@@ -6,7 +6,7 @@ This specifies intended code, not existing modules. Public interfaces below esta
 
 Inspected target: Linux x86-64, AMD Ryzen 3 8300GE, 4 cores / 8 threads, Radeon 740M-class integrated graphics, approximately 6.9 GiB usable system RAM. At inspection approximately 3.7 GiB was available; that is not a permanent allocation. CPU flags include AVX2 and AVX-512, but compiled artifacts must declare their portability and never assume flags on a different host.
 
-Candidate stack: Python, NumPy, optional Numba, FastAPI, Uvicorn, SQLite; TypeScript, Three.js, Vite. Conda supplies Python, Node, native libraries, Python tools, and test tools. npm supplies browser dependencies locally within activated `arboria`. Resolve exact supported versions in R1; Python 3.14 compatibility is not established.
+Baseline stack: Python 3.13, NumPy, optional Numba, FastAPI, Uvicorn, SQLite; TypeScript, Three.js, Vite. Conda supplies Python, Node, native libraries, Python tools, and test tools. npm supplies browser dependencies locally within activated `arboria`. Exact installed versions are locked in `conda-linux-64.lock` and `web/package-lock.json`; direct dependency rationale is in `docs/dependencies.md`.
 
 Check in a human-readable environment specification and a machine-resolved Linux x86-64 Conda lock covering transitive packages, channels, and builds. Check in `package-lock.json`; use `npm ci`. Document tools used to regenerate locks. A candidate library unavailable through the allowed managers triggers clarification, not a pip fallback.
 
