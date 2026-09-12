@@ -177,3 +177,17 @@ Records delivered work and actual evidence. Planned features belong in [ROADMAP.
 ### Limitations
 
 - Clock baseline only: state is not persisted, no biological tick loop consumes it, no command queue exists, and no frontend clock controls exist yet.
+
+## 2026-09-13 — R1 roadmap granularity update
+
+### Changed
+
+- Split the R1 roadmap scope into finer evidence-backed checkbox groups so completed baseline slices are visibly checked while unfinished parts remain unchecked.
+
+### Evidence and verification
+
+- Documentation-only change; Markdown link/fence/whitespace checks and `git diff --check` were run.
+
+### Limitations
+
+- No implementation behavior changed.

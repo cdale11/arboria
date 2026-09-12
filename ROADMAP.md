@@ -21,18 +21,63 @@ Dependency: P0. This is the first playable release, not a skeleton server.
 
 ### Scope
 
-- [x] Resolve and lock the baseline Conda Python/numerical/server/test stack and environment-local npm TypeScript/Vite/Three.js/Vitest stack.
+#### Toolchain and launcher
+
+- [x] Resolve and lock the baseline Conda Python/numerical/server/test stack. Evidence: `docs/evidence/R1-dependencies.md`.
+- [x] Resolve and lock the environment-local npm TypeScript/Vite/Three.js/Vitest stack. Evidence: `docs/evidence/R1-dependencies.md`.
 - [ ] Select and lock browser e2e tooling compatible with the Conda/npm policy.
-- [x] Deliver baseline one-script build/run for the current static server page; full R1 launcher gates still require authentication, persistence, migrations, offline repeat-start evidence, and failure-injection tests.
-- [ ] Password-protected single world at configurable `0.0.0.0:8765`, owner-device concurrency, bounded command/stream protocol. Baseline shared-password/session auth, CSRF tokens, origin checks, and login throttling are implemented; world ownership and command/stream protocol remain incomplete.
-- [ ] Continuous 48× default clock, pause/speed controls, no progression during server downtime. Baseline in-memory authenticated clock controls are implemented; persistence and integration with world ticks remain incomplete.
-- [ ] Organ topology, causal vegetative development, light/carbon/water/NPK physiology, root-zone environment, damage/death, explicit species coverage.
-- [ ] Six proposed representative species in outdoor/greenhouse zones, with source-backed or explicitly provisional parameter metadata and reviewed scenarios.
-- [ ] Procedural 2.5D nursery and usable desktop/touch inspection/care/shop controls.
-- [ ] Real inventory, supplier purchases, demand-limited plant sales, finite cash/material accounting.
-- [ ] Competent full-authority caretaker for available actions, hard player protections, real online neural prediction and preference learning with visible evidence.
-- [ ] Autosave, named saves, restore, export/import, consistent world+learner checkpoints, crash recovery, process lock. Baseline data-directory process lock is implemented; save/checkpoint/recovery systems remain incomplete.
-- [ ] Document actual commands, setup, controls, backup/recovery, approximation/unsupported coverage, and measured limitations.
+- [x] Provide baseline `./run.sh` that activates `arboria`, prioritizes Conda Node/npm, builds the current frontend, and starts Uvicorn. Evidence: `docs/evidence/R1-launcher-server.md`.
+- [ ] Complete full R1 launcher gates: lock fingerprint synchronization, migration checks, interrupted-build recovery, offline repeat-start evidence, and failure-injection tests.
+
+#### Access, ownership, and commands
+
+- [x] Implement shared-password setup and session login/logout/status endpoints. Evidence: `docs/evidence/R1-auth-baseline.md`.
+- [x] Implement CSRF tokens, same-origin unsafe-request checks, and baseline failed-login throttling. Evidence: `docs/evidence/R1-auth-hardening.md`.
+- [x] Implement baseline data-directory process lock preventing two local server owners. Evidence: `docs/evidence/R1-process-lock.md`.
+- [ ] Implement authenticated single-world ownership metadata.
+- [ ] Implement bounded command envelope, request epoch, deduplication, validation, and execution receipts.
+- [ ] Implement bounded WebSocket/server-stream projection protocol and reconnect/resync behavior.
+
+#### Time and world lifecycle
+
+- [x] Implement server-owned in-memory 48× simulation clock with authenticated status, pause, resume, and speed controls. Evidence: `docs/evidence/R1-clock-baseline.md`.
+- [ ] Persist clock/world lifecycle state so restart resumes saved simulation time without wall-clock catch-up.
+- [ ] Implement one-writer world loop consuming clock ticks at the documented 300-sim-second base tick.
+- [ ] Add lifecycle controls for pause/resume/save/restore/shutdown that remain serviceable while biological progression is paused.
+
+#### Persistence and recovery
+
+- [ ] Implement SQLite metadata store and immutable checkpoint generation layout.
+- [ ] Implement autosave, named saves, restore, export/import, and consistent world+learner checkpoint protocol.
+- [ ] Implement crash/disk-failure recovery and migration protocol.
+- [ ] Add atomic-save failure-injection tests.
+
+#### Biology and species
+
+- [ ] Implement organ topology with stable IDs, acyclic parentage, cohort rules, and explicit resource pools.
+- [ ] Implement causal vegetative development driven by resources rather than decorative branch generation.
+- [ ] Implement light, carbon, water, N/P/K, root-zone environment, stress, damage, and death for R1 coverage.
+- [ ] Deliver six proposed representative species in outdoor/greenhouse zones with source-backed or explicitly provisional parameter metadata and reviewed scenarios.
+- [ ] Document per-species supported, approximated, deferred, and unsupported processes.
+
+#### Nursery, UI, and economy
+
+- [ ] Implement procedural 2.5D nursery rendering with generated assets and no gameplay dependence on visual level of detail.
+- [ ] Implement usable desktop/touch inspection, care, protection, shop, save, and clock controls.
+- [ ] Implement real inventory, suppliers, purchases, demand-limited plant sales, and finite cash/material accounting.
+- [ ] Add economy tests for transaction consistency, duplicate sales, bounded demand, and anti-arbitrage.
+
+#### Companion and learning
+
+- [ ] Implement competent full-authority caretaker for available actions, constrained by hard player protections.
+- [ ] Implement real online neural prediction and preference learning with persisted model, optimizer, normalization, replay, RNG, and evaluation state.
+- [ ] Demonstrate R1 learning holdout and ablation evidence, including baseline-only fallback honesty.
+
+#### Documentation and evidence
+
+- [ ] Update README with actual setup/run/control/backup instructions for the playable release.
+- [ ] Produce `docs/evidence/R1.md` aggregating final R1 commands, versions, platform, scenario seeds, metrics, failures, limitations, and artifact locations.
+- [ ] Keep CHANGELOG, ROADMAP, docs contracts, and MISTAKES synchronized with every delivered coherent change.
 
 ### Mandatory gates
 
