@@ -95,67 +95,205 @@ R1 scope excludes sexual reproduction, advanced bonsai craft, layered chemistry/
 
 Dependency: R1.
 
-- [ ] Implement phenology, flowers/fruit/seeds, supported pollination pathways, compatibility, germination, and species-appropriate propagation.
-- [ ] Implement versioned genetics, recombination/mutation, phenotype trade-offs, lineage, and selection.
-- [ ] Add harvest/product inventory and sales backed by produced material; companion handles supported propagation/harvest.
-- [ ] Extend UI with working breeding/lineage/product workflows and scientific coverage information.
-- [ ] Validate reproductive conservation, compatibility, inheritance distributions, seed persistence, and multi-generation diversity over fixed replicates.
-- [ ] Demonstrate at least one heritable selection response with a documented cost/trade-off, not a scripted rarity bonus.
-- [ ] Pass regression, new browser flows, save migration/recovery, performance regression, and multi-season soak gates; publish R2 evidence and commit/push.
+### Development and reproductive biology
+
+- [ ] Implement thermal-time development with explicit base/ceiling temperatures.
+- [ ] Implement photoperiod, chilling/vernalization, dormancy, and senescence for supported species.
+- [ ] Implement flowers/cones or documented analogous reproductive structures.
+- [ ] Implement pollen/gamete viability, timing overlap, and supported pollination pathways.
+- [ ] Implement fruit/seed development with carbon, water, and nutrient costs.
+- [ ] Implement germination, viability decay, and storage-condition effects.
+- [ ] Implement species-appropriate propagation methods for R2 species coverage.
+
+### Genetics and selection
+
+- [ ] Implement versioned quantitative-trait genotype records.
+- [ ] Implement recombination, mutation distributions, dominance rules, and phenotype mapping.
+- [ ] Enforce species/hybrid compatibility through validated compatibility records.
+- [ ] Persist lineage, parentage, seed lots, cultivar identity, and RNG streams.
+- [ ] Demonstrate at least one heritable selection response with a documented trade-off.
+- [ ] Measure diversity and unintended correlated trait changes over fixed replicates.
+
+### Products, economy, UI, and companion
+
+- [ ] Add harvest/product inventory backed by produced biological material.
+- [ ] Add sales for seeds, fruit, cuttings, and other R2 products through finite transactions.
+- [ ] Add working breeding, pollination, seed-lot, lineage, propagation, harvest, and product UI flows.
+- [ ] Extend companion authority to supported propagation, pollination, seed management, and harvest actions.
+- [ ] Display scientific coverage, compatibility, provenance, and unsupported reproductive behavior per species.
+
+### R2 gates and evidence
+
+- [ ] Validate reproductive resource conservation, inheritance distributions, compatibility, viability, and persistence.
+- [ ] Add browser flows for breeding, lineage, propagation, harvest, and product sale.
+- [ ] Add save migration/recovery tests for R2 schemas and lineages.
+- [ ] Pass performance regression and multi-season soak gates.
+- [ ] Publish `docs/evidence/R2.md`, update docs/changelog/roadmap, commit, push, and verify remote equality.
 
 ## R3 — Biological bonsai craft and structural horticulture
 
 Dependency: R2.
 
-- [ ] Implement shoot/root pruning, bud response, defoliation, wiring/removal, wound progression, repotting/root architecture effects, and validated graft compatibility.
-- [ ] Support consequence previews, explicit protected structures/actions, touch-friendly precise selection, and manager policies for structural interventions.
-- [ ] Preserve mass/material and lineage through pruning/cuttings/grafts; no free branch/biomass generation.
-- [ ] Demonstrate species-dependent recovery and structural response with plausible stress/mortality outcomes.
-- [ ] Pass biological/regression/UI/migration/performance gates and unattended manager scenarios; publish R3 evidence and commit/push.
+### Structural interventions
+
+- [ ] Implement shoot pruning that removes real topology, resources, and descendant organs.
+- [ ] Implement root pruning that removes absorptive/storage structures and changes hydraulic risk.
+- [ ] Implement bud response through source/sink and signaling effects.
+- [ ] Implement defoliation with reserve cost, stress, regrowth, and mortality consequences.
+- [ ] Implement wiring, unwiring, orientation changes, pressure damage, and timing effects.
+- [ ] Implement repotting and root-zone/container architecture effects.
+- [ ] Implement wound area, sealing, infection exposure, and transport consequences.
+- [ ] Implement graft attempts, healing, compatibility, and transport connection before resource sharing.
+
+### Bonsai UI, policies, and accounting
+
+- [ ] Add precise mouse/touch branch/root selection and preview controls.
+- [ ] Add consequence previews for pruning, root work, wiring, defoliation, repotting, and grafting.
+- [ ] Add explicit protections for plants, structures, and destructive action classes.
+- [ ] Extend companion policies for structural interventions, including conservative defaults and protected exceptions.
+- [ ] Account for removed material as cuttings, products, compost input, or waste without creating biomass.
+- [ ] Preserve lineage and graft provenance through structural changes.
+
+### R3 gates and evidence
+
+- [ ] Validate topology integrity, mass/material conservation, wound progression, graft compatibility, and root/shoot stress response.
+- [ ] Demonstrate species-dependent recovery and plausible mortality/stunting outcomes.
+- [ ] Add browser flows for bonsai operations and mobile precise selection.
+- [ ] Add save migration/recovery tests for structural/graft/wound state.
+- [ ] Pass performance regression and unattended manager scenarios.
+- [ ] Publish `docs/evidence/R3.md`, update docs/changelog/roadmap, commit, push, and verify remote equality.
 
 ## R4 — Soil, compost, disease, and ecological interaction
 
 Dependency: R3.
 
-- [ ] Implement layered substrates and water/nutrient transport, fertilizer composition, buffering/pH approximation, oxygen and root-zone effects.
-- [ ] Implement compost feedstocks, microbial functional groups, heat/moisture/oxygen, mineralization, leachate, maturity, and usable compost products.
-- [ ] Add host-compatible pest/pathogen spread, treatments, and beneficial interactions with documented approximations.
-- [ ] Complete compost/fertilizer/treatment UI, inventory transformations, companion routines, and state migration.
-- [ ] Demonstrate at least three cross-system effects arising from shared processes, with reproducible causal traces and ablations.
-- [ ] Pass closed/open resource budgets, outbreak/treatment/compost scenarios, regression/UI/performance and multi-season soak; publish R4 evidence and commit/push.
+### Substrate and nutrient chemistry
+
+- [ ] Implement layered root-zone water storage, drainage, diffusion/advection, and leaching.
+- [ ] Implement fertilizer items with explicit N/P/K and supported secondary/micronutrient composition.
+- [ ] Implement nutrient transport, uptake, sorption, buffering, and bounded pH approximation.
+- [ ] Implement oxygen availability and waterlogging effects on roots and microbes.
+- [ ] Preserve open-system resource accounting for imports, drainage, gases, leachate, and discarded matter.
+
+### Compost and soil ecology
+
+- [ ] Implement compost feedstock records with water, carbon, nitrogen, degradable fractions, and provenance.
+- [ ] Implement microbial functional groups, heat generation/loss, moisture, oxygen, and decomposition rates.
+- [ ] Implement mineralization, leachate, maturity criteria, and usable compost products.
+- [ ] Implement beneficial microbe interactions with resource costs and bounded benefits.
+- [ ] Implement host-compatible pest/pathogen exposure, growth, spread, damage, and treatment effects.
+
+### UI, companion, and transformations
+
+- [ ] Add working compost, fertilizer, treatment, substrate-mixing, leachate, and soil-inspection UI flows.
+- [ ] Add inventory transformations for composting, mixing, applying, discarding, and harvesting amendments.
+- [ ] Extend companion routines for compost maintenance, fertilizer scheduling, treatment, and outbreak response.
+- [ ] Add state migration for substrate layers, ecology, pests/pathogens, and treatment histories.
+
+### R4 gates and evidence
+
+- [ ] Validate closed/open resource budgets for water, carbon, N/P/K, gases, leachate, and waste.
+- [ ] Validate outbreak/treatment, compost maturity, oxygen stress, and fertilizer/leaching scenarios.
+- [ ] Demonstrate at least three cross-system effects with reproducible causal traces and ablations.
+- [ ] Add browser flows and regression tests for compost/fertilizer/treatment systems.
+- [ ] Pass performance regression and multi-season soak gates.
+- [ ] Publish `docs/evidence/R4.md`, update docs/changelog/roadmap, commit, push, and verify remote equality.
 
 ## R5 — Adaptive commercial shop management
 
 Dependency: R4.
 
-- [ ] Add learned demand, bounded price exploration, seasonal production/propagation scheduling, stock forecasting, and higher-level manager planning.
-- [ ] Account for customer budgets/preferences, supply limitations, storage/viability, operating inputs, and product quality.
-- [ ] Expose explanations, learned preferences, planning horizon, uncertainty, policy overrides, and away reports.
-- [ ] Demonstrate multi-season autonomous operation with real transactions, no protection violations, and comparisons against frozen/baseline managers over multiple seeds.
-- [ ] Evaluate profitability together with mortality, inventory diversity, resource use, and outcome uncertainty; document failure cases rather than optimizing one headline metric.
-- [ ] Pass anti-arbitrage, adversarial-policy, catastrophic-forgetting, migration, UI, performance and soak gates; publish R5 evidence and commit/push.
+### Commercial learning and planning
+
+- [ ] Implement learned demand forecasting with customer cohorts, budgets, preferences, seasonality, and uncertainty.
+- [ ] Implement bounded price exploration and quote expiry without synthetic random profit.
+- [ ] Implement seasonal production, propagation, harvest, and inventory scheduling.
+- [ ] Implement stock forecasting with storage, viability, spoilage, quality, and space constraints.
+- [ ] Implement higher-level manager planning over care, production, purchases, sales, and labor-saving decisions.
+- [ ] Account for operating inputs, supplier limits, product quality, and real transaction constraints.
+
+### Manager controls and explanations
+
+- [ ] Expose learned preferences, planning horizon, uncertainty, objectives, and policy overrides.
+- [ ] Add away reports covering plant changes, earnings, interventions, losses, risks, and learning updates.
+- [ ] Enforce player protections and cash/material constraints as hard constraints under all commercial planning.
+- [ ] Provide reset/freeze/baseline comparison controls for learned commercial behavior.
+
+### R5 gates and evidence
+
+- [ ] Demonstrate multi-season autonomous operation with real transactions and no protection violations.
+- [ ] Compare learned manager against frozen/baseline managers over multiple fixed seeds.
+- [ ] Evaluate profit, mortality, inventory diversity, resource use, labor reduction, and uncertainty together.
+- [ ] Run anti-arbitrage, adversarial-policy, catastrophic-forgetting, migration, UI, performance, and soak tests.
+- [ ] Document failure cases and trade-offs rather than optimizing one headline metric.
+- [ ] Publish `docs/evidence/R5.md`, update docs/changelog/roadmap, commit, push, and verify remote equality.
 
 ## R6 — Broad calibrated collection and scale
 
 Dependency: R5. Species packages can be developed as complete internal changes earlier, but this scale release requires the full interacting systems.
 
-- [ ] Expand to a proposed baseline of at least 60 real species across the agreed categories, with per-species provenance, process coverage, and scenarios. Revisit the exact catalog with the user before sourcing/implementation; do not fill the count with reskins.
-- [ ] Cover meaningful functional differences in architecture, seasonality, water strategy, reproduction, and horticultural response.
-- [ ] Meet 1,000-plant target-host tick/RAM gates with heterogeneous mature plants, learning, commerce, saves, and active client projections.
-- [ ] Demonstrate mobile visual scaling without changing server biology and quantify browser/device results.
-- [ ] Benchmark CPU vectorization/cohort algorithms and optional iGPU learning; adopt GPU use only if end-to-end evidence supports it.
-- [ ] Pass per-species suites, integrated multi-year scenarios, migration, regression and 24-hour soak; publish R6 evidence and commit/push.
+### Species catalog expansion
+
+- [ ] Revisit and confirm the exact expanded species list with the user before sourcing/implementation.
+- [ ] Expand to a proposed baseline of at least 60 real species across trees, bonsai-suitable plants, herbs, vegetables, succulents, houseplants, and greenhouse/outdoor groups.
+- [ ] Add per-species provenance, parameter uncertainty, process coverage, reference scenarios, and unsupported-behavior notes.
+- [ ] Cover meaningful differences in architecture, seasonality, photosynthetic/water strategy, reproduction, substrate response, pruning response, and horticultural products.
+- [ ] Avoid filling the count with reskins or generic unsupported parameters.
+
+### Scale and rendering
+
+- [ ] Meet 1,000-plant target-host tick/RAM gates with heterogeneous mature plants and overlapping canopies.
+- [ ] Include active learning, commerce, saves, manager behavior, and active client projections during scale tests.
+- [ ] Demonstrate mobile visual scaling without changing server biology.
+- [ ] Quantify browser FPS/memory on named desktop and mobile devices/settings.
+
+### Optimization evidence
+
+- [ ] Benchmark CPU vectorization, cohort algorithms, memory layouts, and thread settings.
+- [ ] Benchmark optional iGPU learning/render-adjacent workloads only if dependency and memory constraints allow.
+- [ ] Adopt GPU use only with end-to-end evidence; otherwise document why CPU remains preferred.
+- [ ] Keep optimized paths equivalent to reference kernels within documented tolerances.
+
+### R6 gates and evidence
+
+- [ ] Pass per-species biological/reference suites.
+- [ ] Pass integrated multi-year scenarios, migration, regression, and 24-real-hour soak gates.
+- [ ] Publish target-host performance metrics, browser/device metrics, bottlenecks, and residual limitations.
+- [ ] Publish `docs/evidence/R6.md`, update docs/changelog/roadmap, commit, push, and verify remote equality.
 
 ## R7 — Validated emergent-rule laboratory
 
 Dependency: R6; research gate, not guaranteed completion by a deadline.
 
-- [ ] Resolve local proposal-generation feasibility and user-approved runtime/dependency requirements.
-- [ ] Implement a restricted typed, unit-aware proposal language and bounded interpreter; no generated executable code.
-- [ ] Implement isolated evaluation, conservation/compatibility/resource checks, novelty/usefulness assessment, versioned activation, complete-world rollback, and persistent provenance.
-- [ ] Demonstrate an accepted new interaction/item transformation not individually scripted as a gameplay event, alongside rejected invalid proposals and reproducible evaluations.
+### Research feasibility and policy
+
+- [ ] Resolve local proposal-generation feasibility and resource budget on the target machine.
+- [ ] Ask the user before adopting remote AI, ongoing external cost, new package-manager exceptions, or changed deployment requirements.
+- [ ] Define opt-in world settings, risk warnings, rollback expectations, and unsupported guarantees.
+- [ ] Decide whether the generator is neural, evolutionary, search-based, symbolic, or hybrid using measured evidence.
+
+### Proposal language and validator
+
+- [ ] Implement a restricted typed, unit-aware proposal language for recipes, bounded interactions, and item definitions.
+- [ ] Implement a bounded interpreter with no generated executable Python/JavaScript, imports, file/network access, or unbounded loops.
+- [ ] Validate dimensions, resources, compatibility, dependencies, conservation, cost, and evaluation bounds.
+- [ ] Persist proposal provenance, generator checkpoint, parent rule-set hash, validation results, and rejection reasons.
+
+### Isolated evaluation and activation
+
+- [ ] Run proposals in isolated test worlds with fixed CPU/memory/tick budgets.
+- [ ] Evaluate adversarial, conservation, stability, economy-exploit, and multi-season scenarios before activation.
+- [ ] Score novelty and usefulness separately from validity.
+- [ ] Activate accepted rule sets only at checkpoint boundaries in opted-in worlds.
+- [ ] Implement complete-world rollback to preactivation snapshots for failed active rules.
+
+### R7 gates and evidence
+
+- [ ] Demonstrate an accepted new interaction/item transformation not individually scripted as a gameplay event.
+- [ ] Demonstrate rejected invalid proposals with reproducible reasons.
 - [ ] Show sustained bounded resource use and no validator bypass under adversarial generated proposals.
-- [ ] Deliver opt-in laboratory controls, transparent limits, save compatibility, documentation, integration/soak/performance evidence and commit/push.
+- [ ] Deliver opt-in laboratory UI, transparent limits, save compatibility, integration, soak, and performance evidence.
+- [ ] Publish `docs/evidence/R7.md`, update docs/changelog/roadmap, commit, push, and verify remote equality.
 
 If research gates fail, preserve in-progress status, publish the evidence, and consult the user. Do not replace this feature with random item naming or claim unrestricted scientific invention.
 

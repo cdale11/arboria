@@ -191,3 +191,18 @@ Records delivered work and actual evidence. Planned features belong in [ROADMAP.
 ### Limitations
 
 - No implementation behavior changed.
+
+## 2026-09-13 — Full roadmap granularity update
+
+### Changed
+
+- Split R2 through R7 into grouped granular checklist items matching the R1 roadmap style.
+- Preserved all later-release items as unchecked because no R2-R7 implementation evidence exists yet.
+
+### Evidence and verification
+
+- Documentation-only change; Markdown link/fence/whitespace checks and `git diff --check` were run.
+
+### Limitations
+
+- No implementation behavior changed.
