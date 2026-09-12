@@ -45,7 +45,7 @@ It locates Conda, activates `arboria`, ensures npm uses Conda's Node, installs l
 
 Python dependencies and Node must be installed through Conda. Browser packages use pinned npm dependencies and `npm ci` within activated `arboria`. No pip fallback is authorized. Runtime operation after initial installation/build must not require internet access. The current direct dependency policy is recorded in [dependency policy](docs/dependencies.md).
 
-Authentication uses one shared local password and HttpOnly SameSite session cookies. First interactive run prompts for the password; unattended setup may use `ARBORIA_SETUP_PASSWORD` exactly once in a controlled local environment. On the host, open `http://localhost:8765`; on a trusted LAN, use the host's LAN address and port. `0.0.0.0` is a bind address, not the browser destination. Direct public-internet deployment is outside the first release's deployment contract.
+Authentication uses one shared local password, HttpOnly SameSite session cookies, a readable session-bound CSRF cookie for authenticated mutations, same-origin checks for unsafe requests, and a baseline failed-login throttle. First interactive run prompts for the password; unattended setup may use `ARBORIA_SETUP_PASSWORD` exactly once in a controlled local environment. On the host, open `http://localhost:8765`; on a trusted LAN, use the host's LAN address and port. `0.0.0.0` is a bind address, not the browser destination. Direct public-internet deployment is outside the first release's deployment contract.
 
 ## Saves and learning
 

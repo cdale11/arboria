@@ -16,6 +16,8 @@ from pathlib import Path
 from typing import Any
 
 COOKIE_NAME = "arboria_session"
+CSRF_COOKIE_NAME = "arboria_csrf"
+CSRF_HEADER_NAME = "x-arboria-csrf"
 HASH_ALGORITHM = "pbkdf2_sha256"
 PBKDF2_ITERATIONS = 600_000
 SESSION_TTL_SECONDS = 7 * 24 * 60 * 60
@@ -28,6 +30,7 @@ class AuthConfigurationError(RuntimeError):
 @dataclass(frozen=True)
 class Session:
     token: str
+    csrf_token: str
     expires_at: int
 
 
@@ -131,12 +134,17 @@ def _token_digest(token: str) -> str:
 def create_session(root: Path | None = None, now: int | None = None) -> Session:
     now = now or int(time.time())
     token = secrets.token_urlsafe(32)
+    csrf_token = secrets.token_urlsafe(32)
     expires_at = now + SESSION_TTL_SECONDS
     payload = _load_sessions(root)
     sessions = payload["sessions"]
-    sessions[_token_digest(token)] = {"expires_at": expires_at, "created_at": now}
+    sessions[_token_digest(token)] = {
+        "expires_at": expires_at,
+        "created_at": now,
+        "csrf_digest": _token_digest(csrf_token),
+    }
     _atomic_write_json(sessions_file(root), payload)
-    return Session(token=token, expires_at=expires_at)
+    return Session(token=token, csrf_token=csrf_token, expires_at=expires_at)
 
 
 def session_is_valid(token: str | None, root: Path | None = None, now: int | None = None) -> bool:
@@ -157,6 +165,25 @@ def destroy_session(token: str | None, root: Path | None = None) -> None:
     payload = _load_sessions(root)
     payload["sessions"].pop(_token_digest(token), None)
     _atomic_write_json(sessions_file(root), payload)
+
+
+def csrf_is_valid(
+    session_token: str | None,
+    csrf_token: str | None,
+    root: Path | None = None,
+    now: int | None = None,
+) -> bool:
+    if not session_token or not csrf_token:
+        return False
+    now = now or int(time.time())
+    payload = _load_sessions(root)
+    record = payload["sessions"].get(_token_digest(session_token))
+    if not isinstance(record, dict):
+        return False
+    if int(record.get("expires_at", 0)) <= now:
+        return False
+    expected = str(record.get("csrf_digest", ""))
+    return hmac.compare_digest(_token_digest(csrf_token), expected)
 
 
 def ensure_password_configured(root: Path | None = None) -> None:

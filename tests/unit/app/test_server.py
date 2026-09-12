@@ -3,7 +3,14 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 from pytest import MonkeyPatch
 
-from arboria.app.auth import COOKIE_NAME, configure_password, password_file, sessions_file
+from arboria.app.auth import (
+    COOKIE_NAME,
+    CSRF_COOKIE_NAME,
+    CSRF_HEADER_NAME,
+    configure_password,
+    password_file,
+    sessions_file,
+)
 from arboria.app.server import create_app
 
 
@@ -61,10 +68,17 @@ def test_login_status_and_logout(monkeypatch: MonkeyPatch, tmp_path: Path) -> No
     assert accepted.status_code == 200
     assert accepted.json()["authenticated"] is True
     assert COOKIE_NAME in accepted.cookies
+    assert CSRF_COOKIE_NAME in accepted.cookies
     assert sessions_file(tmp_path).is_file()
     assert client.get("/api/v1/auth/status").json() == {"authenticated": True}
 
-    logged_out = client.post("/api/v1/auth/logout")
+    rejected_logout = client.post("/api/v1/auth/logout")
+    assert rejected_logout.status_code == 403
+
+    logged_out = client.post(
+        "/api/v1/auth/logout",
+        headers={CSRF_HEADER_NAME: accepted.cookies[CSRF_COOKIE_NAME]},
+    )
     assert logged_out.status_code == 200
     assert client.get("/api/v1/auth/status").json() == {"authenticated": False}
 
@@ -82,6 +96,32 @@ def test_form_login_redirects_to_root(monkeypatch: MonkeyPatch, tmp_path: Path) 
     assert response.status_code == 303
     assert response.headers["location"] == "/"
     assert COOKIE_NAME in response.cookies
+    assert CSRF_COOKIE_NAME in response.cookies
+
+
+def test_cross_origin_mutations_are_rejected(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    client = TestClient(create_app())
+
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"password": "correct horse battery staple"},
+        headers={"Origin": "http://attacker.invalid"},
+    )
+
+    assert response.status_code == 403
+
+
+def test_failed_login_rate_limit(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    client = TestClient(create_app())
+
+    for _ in range(5):
+        response = client.post("/api/v1/auth/login", json={"password": "wrong password"})
+        assert response.status_code == 401
+
+    limited = client.post("/api/v1/auth/login", json={"password": "wrong password"})
+    assert limited.status_code == 429
 
 
 def test_password_hash_stays_private(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:

@@ -107,3 +107,27 @@ Records delivered work and actual evidence. Planned features belong in [ROADMAP.
 ### Limitations
 
 - Authentication baseline only: CSRF/origin hardening, login rate limiting, Secure-cookie HTTPS behavior, process lock, world ownership, command authorization, persistence, simulation, economy, companion, and e2e browser testing remain incomplete.
+
+## 2026-09-13 — R1 authentication hardening
+
+### Added
+
+- Added session-bound CSRF tokens with readable SameSite CSRF cookies and required `X-Arboria-CSRF` headers for authenticated logout.
+- Added same-origin rejection for unsafe HTTP requests with mismatched `Origin` or `Referer` headers.
+- Added in-memory failed-login throttling after five failures from one client address in a 15-minute window.
+- Expanded auth tests for CSRF-protected logout, cross-origin rejection, and rate limiting.
+- Updated README, roadmap, architecture notes, and evidence documentation.
+
+### Evidence and verification
+
+- `python -m pytest tests/unit` passed with 8 tests and the documented FastAPI/Starlette `TestClient` deprecation warning.
+- `ruff check .` passed.
+- `mypy src tests/unit` passed.
+- `npm --prefix web run check` passed.
+- `npm --prefix web run test` passed.
+- `npm --prefix web run build` passed.
+- A smoke run of `ARBORIA_HOST=127.0.0.1 ARBORIA_PORT=8767 ARBORIA_DATA_DIR=<tmp> ARBORIA_SETUP_PASSWORD=<temporary> ./run.sh` configured a password and served `/health` with authentication marked implemented.
+
+### Limitations
+
+- Hardening baseline only: rate limiting is in-memory, Secure-cookie HTTPS behavior is not active on LAN HTTP, command/WebSocket authorization does not exist yet, and world ownership/process lock/persistence/simulation remain incomplete.
