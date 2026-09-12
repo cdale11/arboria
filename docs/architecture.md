@@ -144,7 +144,7 @@ GPU training is optional and gated by actual end-to-end benefit, dependency avai
 
 ## 8. Launcher contract
 
-`./run.sh` must work from any caller working directory and paths containing spaces:
+`./run.sh` currently works as a baseline launcher for static assets and health endpoints. The complete R1 launcher must work from any caller working directory and paths containing spaces:
 
 1. Resolve repository path; locate Conda via active installation or documented configuration.
 2. Activate/create `arboria` under the explicit setup contract; never install system packages or alter global npm.

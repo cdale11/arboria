@@ -12,6 +12,7 @@ warn_unused_configs = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]
 markers = [
   "performance: target-host performance and soak checks",
 ]

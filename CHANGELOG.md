@@ -60,3 +60,27 @@ Records delivered work and actual evidence. Planned features belong in [ROADMAP.
 - Browser e2e tooling is intentionally not selected yet; `web/package.json` keeps `test:e2e` failing until a real suite is added.
 - npm warned that `esbuild` has an install script not covered by npm's `allowScripts` review flow. The current build passes, but launcher/setup work must choose an explicit policy.
 - Locks are Linux x86-64/local-browser-stack focused; cross-platform support is not claimed.
+
+## 2026-09-12 — R1 launcher/server baseline
+
+### Added
+
+- Added `run.sh`, a baseline single-command launcher that discovers Conda, activates `arboria`, prioritizes Conda Node/npm, builds browser assets when source/config fingerprints change, and starts Uvicorn.
+- Added a minimal FastAPI application with `/health`, `/api/v1/health`, and static frontend serving for the current baseline page.
+- Added unit tests for health endpoint scope and API/plain health consistency.
+- Updated README, roadmap, architecture notes, and evidence documentation to reflect the current runnable baseline without claiming gameplay exists.
+
+### Evidence and verification
+
+- `python -m pytest tests/unit` passed.
+- pytest emitted a `StarletteDeprecationWarning` from FastAPI's re-exported `TestClient`; it did not fail the suite.
+- `ruff check .` passed.
+- `mypy src tests/unit` passed.
+- `npm --prefix web run check` passed.
+- `npm --prefix web run test` passed.
+- `npm --prefix web run build` passed.
+- A smoke run of `ARBORIA_PORT=8766 ./run.sh` served `/health` successfully and reported unimplemented authentication, simulation, persistence, and companion systems.
+
+### Limitations
+
+- Launcher/server baseline only: authentication, world ownership, persistence, simulation, economy, companion, e2e browser testing, offline repeat-start evidence, process lock, and failure-injection gates remain incomplete.

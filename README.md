@@ -4,7 +4,7 @@ A persistent, biologically grounded nursery and plant-shop simulation with proce
 
 ## Project status
 
-**Dependency baseline only. No game, launcher, server, simulation, browser app, or automated application test suite has been implemented yet.** The documents in this repository define intended behavior and delivery gates; they are not evidence that the described features work. See [ROADMAP.md](ROADMAP.md) for implementation status.
+**Runnable launcher/server baseline only. No game simulation, authentication, persistence, shop economy, companion, or real nursery interface has been implemented yet.** The documents in this repository define intended behavior and delivery gates; they are not evidence that the described features work. See [ROADMAP.md](ROADMAP.md) for implementation status.
 
 ## The game
 
@@ -33,19 +33,19 @@ A persistent, biologically grounded nursery and plant-shop simulation with proce
 
 The default calendar advances 48 simulated days per real day, or approximately one 365-day year per 7.6 real days. A plant's developmental requirements still determine its growth; trees do not become mature merely because the player opens a screen. Starter saplings and established stock make tree care immediately playable.
 
-## Installation and launch: planned contract
+## Installation and launch
 
-The first playable release will provide one command from the repository root:
+The current baseline provides one command from the repository root:
 
 ```bash
 ./run.sh
 ```
 
-**That script does not exist yet. Do not interpret this as a currently runnable instruction.** It will locate Conda, activate `arboria`, synchronize pinned dependencies, build browser assets when inputs change, migrate/validate state, and start the server. Missing Conda will result in actionable instructions rather than an unrequested system-wide installer.
+It locates Conda, activates `arboria`, ensures npm uses Conda's Node, installs locked browser packages if `web/node_modules` is absent, rebuilds browser assets when source/config fingerprints change, and starts the FastAPI server. It currently serves only the honest dependency/launcher baseline page and `/health` endpoints.
 
 Python dependencies and Node must be installed through Conda. Browser packages use pinned npm dependencies and `npm ci` within activated `arboria`. No pip fallback is authorized. Runtime operation after initial installation/build must not require internet access. The current direct dependency policy is recorded in [dependency policy](docs/dependencies.md).
 
-First run will require interactive local password setup or a documented protected configuration mechanism for unattended startup. Passwords will never be passed as command-line arguments or committed. On the host, open `http://localhost:8765`; on a trusted LAN, use the host's LAN address and port. `0.0.0.0` is a bind address, not the browser destination. Direct public-internet deployment is outside the first release's deployment contract.
+Authentication is not implemented yet. On the host, open `http://localhost:8765`; on a trusted LAN, use the host's LAN address and port. `0.0.0.0` is a bind address, not the browser destination. Direct public-internet deployment is outside the first release's deployment contract.
 
 ## Saves and learning
 
@@ -62,7 +62,17 @@ conda activate arboria
 
 This path is specific to the inspected development machine. The launcher must discover Conda rather than hard-code that path.
 
-There are no application tests to run yet. The first release must supply the verification commands and suites described in [testing](docs/testing.md), then update this README with actually verified commands. Dependency smoke checks are recorded in `CHANGELOG.md`.
+Current verification commands:
+
+```bash
+python -m pytest tests/unit
+ruff check .
+PATH="$CONDA_PREFIX/bin:$PATH" npm --prefix web run check
+PATH="$CONDA_PREFIX/bin:$PATH" npm --prefix web run test
+PATH="$CONDA_PREFIX/bin:$PATH" npm --prefix web run build
+```
+
+These are baseline smoke checks only. The first playable release must supply the broader verification commands and suites described in [testing](docs/testing.md). Dependency and launcher smoke checks are recorded in `CHANGELOG.md`.
 
 ## Specification index
 

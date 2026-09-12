@@ -58,6 +58,7 @@ ruff check .
 ## Limitations
 
 - Browser e2e tooling is not selected or locked yet. `npm --prefix web run test:e2e` intentionally fails until a real e2e suite is implemented.
-- No application server, biology, persistence, economy, companion, or gameplay tests exist yet.
+- The later R1 launcher/server baseline added a minimal FastAPI server and `./run.sh`; this dependency evidence does not cover it.
+- No biology, persistence, economy, companion, or gameplay tests exist yet.
 - npm warned that `esbuild` has an install script not covered by npm's `allowScripts` review flow. The current Vite build still passed; R1 launcher/setup work must decide whether to explicitly approve or configure allowed package scripts.
 - An initial npm lock command accidentally used NVM Node because it appeared earlier in `PATH`; see `MISTAKES.md` M-003. The lock was regenerated with Conda Node first in `PATH`.

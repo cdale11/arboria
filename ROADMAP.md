@@ -23,7 +23,7 @@ Dependency: P0. This is the first playable release, not a skeleton server.
 
 - [x] Resolve and lock the baseline Conda Python/numerical/server/test stack and environment-local npm TypeScript/Vite/Three.js/Vitest stack.
 - [ ] Select and lock browser e2e tooling compatible with the Conda/npm policy.
-- [ ] Deliver one-script install/build/run and offline repeat start on target Linux x86-64.
+- [x] Deliver baseline one-script build/run for the current static server page; full R1 launcher gates still require authentication, persistence, migrations, offline repeat-start evidence, and failure-injection tests.
 - [ ] Password-protected single world at configurable `0.0.0.0:8765`, owner-device concurrency, bounded command/stream protocol.
 - [ ] Continuous 48× default clock, pause/speed controls, no progression during server downtime.
 - [ ] Organ topology, causal vegetative development, light/carbon/water/NPK physiology, root-zone environment, damage/death, explicit species coverage.
