@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import os
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +24,7 @@ from .auth import (
     session_is_valid,
     verify_password,
 )
+from .process_lock import DataDirectoryLock
 
 MAX_FAILED_LOGINS = 5
 LOGIN_WINDOW_SECONDS = 15 * 60
@@ -56,10 +58,21 @@ def _origin_is_allowed(request: Request) -> bool:
 
 
 def create_app() -> FastAPI:
+    lock = DataDirectoryLock()
+
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+        lock.acquire()
+        try:
+            yield
+        finally:
+            lock.release()
+
     app = FastAPI(
         title="Arboria",
         summary="Persistent plant simulation game server",
         version="0.1.0",
+        lifespan=lifespan,
     )
     static_dir = _static_dir()
     failed_logins: dict[str, list[float]] = {}
@@ -133,6 +146,7 @@ def create_app() -> FastAPI:
                 "server": True,
                 "static_frontend": static_dir.exists(),
                 "authentication": True,
+                "process_lock": True,
                 "simulation": False,
                 "persistence": False,
                 "companion": False,

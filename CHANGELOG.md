@@ -131,3 +131,26 @@ Records delivered work and actual evidence. Planned features belong in [ROADMAP.
 ### Limitations
 
 - Hardening baseline only: rate limiting is in-memory, Secure-cookie HTTPS behavior is not active on LAN HTTP, command/WebSocket authorization does not exist yet, and world ownership/process lock/persistence/simulation remain incomplete.
+
+## 2026-09-13 — R1 process-lock baseline
+
+### Added
+
+- Added `DataDirectoryLock`, an OS `flock`-backed exclusive lock on `server.lock` under `ARBORIA_DATA_DIR`.
+- Integrated the process lock with FastAPI lifespan startup/shutdown so a second server using the same data directory fails instead of creating another owner.
+- Added process-lock unit tests for second-owner rejection and release/reacquire behavior.
+- Updated health status, README, roadmap, architecture notes, and evidence documentation.
+
+### Evidence and verification
+
+- `python -m pytest tests/unit` passed with 10 tests and the documented FastAPI/Starlette `TestClient` deprecation warning.
+- `ruff check .` passed.
+- `mypy src tests/unit` passed.
+- `npm --prefix web run check` passed.
+- `npm --prefix web run test` passed.
+- `npm --prefix web run build` passed.
+- A two-process smoke check started `./run.sh` with one temporary data directory, verified the first server served `/health`, and verified a second server with the same data directory failed instead of serving concurrently.
+
+### Limitations
+
+- Process-lock baseline only: no SQLite persistence, checkpointing, migration, save/restore, world tick loop, economy, companion, or command streaming exists yet.

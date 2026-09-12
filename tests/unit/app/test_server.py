@@ -33,6 +33,7 @@ def test_health_reports_current_implementation_scope(
     assert payload["phase"] == "r1-auth-baseline"
     assert payload["implemented"]["server"] is True
     assert payload["implemented"]["authentication"] is True
+    assert payload["implemented"]["process_lock"] is True
     assert payload["implemented"]["simulation"] is False
     assert payload["implemented"]["persistence"] is False
 

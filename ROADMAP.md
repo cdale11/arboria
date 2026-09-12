@@ -31,7 +31,7 @@ Dependency: P0. This is the first playable release, not a skeleton server.
 - [ ] Procedural 2.5D nursery and usable desktop/touch inspection/care/shop controls.
 - [ ] Real inventory, supplier purchases, demand-limited plant sales, finite cash/material accounting.
 - [ ] Competent full-authority caretaker for available actions, hard player protections, real online neural prediction and preference learning with visible evidence.
-- [ ] Autosave, named saves, restore, export/import, consistent world+learner checkpoints, crash recovery, process lock.
+- [ ] Autosave, named saves, restore, export/import, consistent world+learner checkpoints, crash recovery, process lock. Baseline data-directory process lock is implemented; save/checkpoint/recovery systems remain incomplete.
 - [ ] Document actual commands, setup, controls, backup/recovery, approximation/unsupported coverage, and measured limitations.
 
 ### Mandatory gates

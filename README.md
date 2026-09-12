@@ -41,7 +41,7 @@ The current baseline provides one command from the repository root:
 ./run.sh
 ```
 
-It locates Conda, activates `arboria`, ensures npm uses Conda's Node, installs locked browser packages if `web/node_modules` is absent, rebuilds browser assets when source/config fingerprints change, configures the local shared password on first run, and starts the FastAPI server. It currently serves only the honest dependency/auth baseline page and health/auth endpoints.
+It locates Conda, activates `arboria`, ensures npm uses Conda's Node, installs locked browser packages if `web/node_modules` is absent, rebuilds browser assets when source/config fingerprints change, configures the local shared password on first run, acquires the data-directory process lock, and starts the FastAPI server. It currently serves only the honest dependency/auth baseline page and health/auth endpoints.
 
 Python dependencies and Node must be installed through Conda. Browser packages use pinned npm dependencies and `npm ci` within activated `arboria`. No pip fallback is authorized. Runtime operation after initial installation/build must not require internet access. The current direct dependency policy is recorded in [dependency policy](docs/dependencies.md).
 
