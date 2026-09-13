@@ -24,6 +24,8 @@ export interface NurseryWorld {
     plant_count: number;
     organ_count: number;
     species_ids: string[];
+    cash_minor: number;
+    demand_remaining: { species_id: string; remaining: number }[];
     reserve_carbon_kg: number;
     structural_carbon_kg: number;
     atmospheric_carbon_uptake_kg: number;
@@ -81,6 +83,11 @@ export function renderNurseryApp(
     `${world.nursery.plant_count} plants, ${world.nursery.organ_count} organs, ` +
     `${world.nursery.dead_plant_count} dead. ` +
     `Species: ${world.nursery.species_ids.join(", ")}. ` +
+    `Cash ${(world.nursery.cash_minor / 100).toFixed(2)} ` +
+    `(${world.nursery.cash_minor} minor units), ` +
+    `buyer demand: ${world.nursery.demand_remaining
+      .map((entry) => `${entry.species_id}×${entry.remaining}`)
+      .join(", ")}. ` +
     `Reserve carbon ${world.nursery.reserve_carbon_kg.toExponential(2)} kg, ` +
     `zone water ${world.nursery.zone_water_kg.toFixed(3)} kg, ` +
     `zone N/P/K ${world.nursery.zone_nitrogen_kg.toExponential(2)}/` +
@@ -161,6 +168,22 @@ export function parseNurseryApi(worldJson: unknown, plantsJson: unknown): Nurser
   ) {
     return null;
   }
+  const cashMinor = toNumber(nursery["cash_minor"]);
+  const demandRaw = nursery["demand_remaining"];
+  if (cashMinor === null || !Array.isArray(demandRaw)) {
+    return null;
+  }
+  const demand: { species_id: string; remaining: number }[] = [];
+  for (const entry of demandRaw) {
+    if (!isRecord(entry)) {
+      return null;
+    }
+    const remaining = toNumber(entry["remaining"]);
+    if (typeof entry["species_id"] !== "string" || remaining === null) {
+      return null;
+    }
+    demand.push({ species_id: entry["species_id"] as string, remaining });
+  }
   const parsedPlants: PlantSummary[] = [];
   for (const entry of plants) {
     if (!isRecord(entry)) {
@@ -228,6 +251,8 @@ export function parseNurseryApi(worldJson: unknown, plantsJson: unknown): Nurser
         zone_potassium_kg: numbers[11] as number,
         dead_plant_count: numbers[12] as number,
         species_ids: speciesIds as string[],
+        cash_minor: cashMinor,
+        demand_remaining: demand,
       },
     },
     plants: parsedPlants,

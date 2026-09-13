@@ -19,18 +19,31 @@ from arboria.sim.clock import (
     SimulationClock,
     clock_status_payload,
 )
+from arboria.sim.economy import (
+    apply_buy_plant,
+    apply_buy_water,
+    apply_sell_plant,
+    economy_from_payload,
+    economy_to_payload,
+    starter_economy,
+)
 from arboria.sim.nursery import (
     MAX_WATER_PER_COMMAND_KG,
     NURSERY_SCHEMA_VERSION,
     STARTER_RESERVOIR_KG,
+    add_starter_plant,
     advance_nursery,
     nutrient_zones_from_payload,
     nutrient_zones_to_payload,
     organs_from_payload,
     organs_to_payload,
     project_plants,
+    remove_plant,
+    species_from_payload,
+    species_to_payload,
     starter_nutrient_zones,
     starter_organs,
+    starter_species_by_plant,
     starter_zones,
     summarize,
     water_plant,
@@ -112,7 +125,9 @@ def create_app() -> FastAPI:
     nursery_organs = starter_organs()
     nursery_zones = starter_zones()
     nursery_nutrient_zones = starter_nutrient_zones()
+    nursery_species = starter_species_by_plant()
     nursery_reservoir_kg = STARTER_RESERVOIR_KG
+    nursery_economy = starter_economy()
     nursery_uptake_kg = 0.0
     nursery_transpired_kg = 0.0
     nursery_drainage_kg = 0.0
@@ -120,7 +135,7 @@ def create_app() -> FastAPI:
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         nonlocal clock, world_loop, world_metadata, nursery_organs, nursery_zones
-        nonlocal nursery_nutrient_zones
+        nonlocal nursery_nutrient_zones, nursery_species, nursery_economy
         nonlocal nursery_reservoir_kg, nursery_uptake_kg, nursery_transpired_kg
         nonlocal nursery_drainage_kg
         lock.acquire()
@@ -138,6 +153,10 @@ def create_app() -> FastAPI:
                 nursery_nutrient_zones = nutrient_zones_from_payload(
                     state.get("nursery_nutrient_zones", []), nursery_organs
                 )
+                nursery_species = species_from_payload(
+                    state.get("nursery_species", []), nursery_organs
+                )
+                nursery_economy = economy_from_payload(state.get("nursery_economy", {}))
                 nursery_reservoir_kg = float(
                     state.get("nursery_reservoir_kg", STARTER_RESERVOIR_KG)
                 )
@@ -169,6 +188,7 @@ def create_app() -> FastAPI:
 
     def tick_world() -> WorldLoopState:
         nonlocal nursery_organs, nursery_zones, nursery_nutrient_zones
+        nonlocal nursery_species
         nonlocal nursery_uptake_kg
         nonlocal nursery_transpired_kg, nursery_drainage_kg
         previous = world_loop.state().sim_tick
@@ -176,7 +196,11 @@ def create_app() -> FastAPI:
         advanced = loop.sim_tick - previous
         if advanced > 0:
             result = advance_nursery(
-                nursery_organs, nursery_zones, nursery_nutrient_zones, advanced
+                nursery_organs,
+                nursery_zones,
+                nursery_nutrient_zones,
+                advanced,
+                nursery_species,
             )
             nursery_organs = result.organs
             nursery_zones = result.zones
@@ -196,6 +220,7 @@ def create_app() -> FastAPI:
             reservoir_kg=nursery_reservoir_kg,
             transpired_kg=nursery_transpired_kg,
             drainage_kg=nursery_drainage_kg,
+            species_by_plant=nursery_species,
         )
         return {
             "schema_version": NURSERY_SCHEMA_VERSION,
@@ -213,6 +238,13 @@ def create_app() -> FastAPI:
             "zone_phosphorus_kg": summary.zone_phosphorus_kg,
             "zone_potassium_kg": summary.zone_potassium_kg,
             "dead_plant_count": summary.dead_plant_count,
+            "cash_minor": nursery_economy.cash_minor,
+            "demand_remaining": [
+                {"species_id": species_id, "remaining": remaining}
+                for species_id, remaining in sorted(
+                    nursery_economy.demand_remaining.items()
+                )
+            ],
         }
 
     def receipt_payload(receipt: Receipt) -> dict[str, Any]:
@@ -230,7 +262,9 @@ def create_app() -> FastAPI:
         return payload
 
     def apply_command(envelope: CommandEnvelope) -> dict[str, Any]:
-        nonlocal nursery_zones, nursery_reservoir_kg, nursery_drainage_kg
+        nonlocal nursery_organs, nursery_zones, nursery_nutrient_zones
+        nonlocal nursery_species, nursery_economy
+        nonlocal nursery_reservoir_kg, nursery_drainage_kg
         if envelope.kind == "clock.pause":
             if envelope.payload:
                 raise CommandValidationError("clock.pause payload must be empty")
@@ -284,6 +318,94 @@ def create_app() -> FastAPI:
                 "drainage_kg": drainage,
                 "max_water_per_command_kg": MAX_WATER_PER_COMMAND_KG,
             }
+        if envelope.kind == "shop.buy_water":
+            if set(envelope.payload) != {"water_kg"}:
+                raise CommandValidationError("shop.buy_water requires water_kg")
+            try:
+                buy_kg = float(envelope.payload["water_kg"])
+            except (TypeError, ValueError) as exc:
+                raise CommandValidationError(
+                    f"invalid shop.buy_water payload: {exc}"
+                ) from exc
+            tick_world()
+            try:
+                next_economy, reservoir_after, cost = apply_buy_water(
+                    nursery_economy, nursery_reservoir_kg, buy_kg
+                )
+            except ValueError as exc:
+                raise CommandValidationError(str(exc)) from exc
+            nursery_economy = next_economy
+            nursery_reservoir_kg = reservoir_after
+            return {
+                "nursery": nursery_payload(),
+                "water_kg": buy_kg,
+                "cost_minor": cost,
+            }
+        if envelope.kind == "shop.buy_plant":
+            if set(envelope.payload) != {"species_id"}:
+                raise CommandValidationError("shop.buy_plant requires species_id")
+            species_id = envelope.payload["species_id"]
+            if not isinstance(species_id, str):
+                raise CommandValidationError("species_id must be a string")
+            tick_world()
+            try:
+                next_economy, cost = apply_buy_plant(nursery_economy, species_id)
+                (next_organs, next_zones, next_nutrients, next_mapping, plant_id) = (
+                    add_starter_plant(
+                        nursery_organs,
+                        nursery_zones,
+                        nursery_nutrient_zones,
+                        nursery_species,
+                        species_id,
+                    )
+                )
+            except ValueError as exc:
+                raise CommandValidationError(str(exc)) from exc
+            nursery_economy = next_economy
+            nursery_organs = next_organs
+            nursery_zones = next_zones
+            nursery_nutrient_zones = next_nutrients
+            nursery_species = next_mapping
+            return {
+                "nursery": nursery_payload(),
+                "plant_id": plant_id,
+                "species_id": species_id,
+                "cost_minor": cost,
+            }
+        if envelope.kind == "shop.sell_plant":
+            if set(envelope.payload) != {"plant_id"}:
+                raise CommandValidationError("shop.sell_plant requires plant_id")
+            try:
+                sell_id = int(envelope.payload["plant_id"])
+            except (TypeError, ValueError) as exc:
+                raise CommandValidationError(
+                    f"invalid shop.sell_plant payload: {exc}"
+                ) from exc
+            tick_world()
+            try:
+                (next_organs, next_zones, next_nutrients, next_mapping, sold_species) = (
+                    remove_plant(
+                        nursery_organs,
+                        nursery_zones,
+                        nursery_nutrient_zones,
+                        nursery_species,
+                        sell_id,
+                    )
+                )
+                next_economy, credit = apply_sell_plant(nursery_economy, sold_species)
+            except ValueError as exc:
+                raise CommandValidationError(str(exc)) from exc
+            nursery_economy = next_economy
+            nursery_organs = next_organs
+            nursery_zones = next_zones
+            nursery_nutrient_zones = next_nutrients
+            nursery_species = next_mapping
+            return {
+                "nursery": nursery_payload(),
+                "plant_id": sell_id,
+                "species_id": sold_species,
+                "credit_minor": credit,
+            }
         raise CommandValidationError("unknown command kind")
 
     def save_clock_status() -> dict[str, float | int | bool]:
@@ -320,6 +442,8 @@ def create_app() -> FastAPI:
             nursery_schema_version=NURSERY_SCHEMA_VERSION,
             nursery_zones=zones_to_payload(nursery_zones),
             nursery_nutrient_zones=nutrient_zones_to_payload(nursery_nutrient_zones),
+            nursery_species=species_to_payload(nursery_species),
+            nursery_economy=economy_to_payload(nursery_economy),
             nursery_reservoir_kg=nursery_reservoir_kg,
         )
         metadata_store.register_checkpoint(
@@ -544,7 +668,7 @@ def create_app() -> FastAPI:
     @app.post("/api/v1/saves/restore")
     async def restore_save(request: Request) -> Response:
         nonlocal clock, world_loop, world_metadata, nursery_organs, nursery_zones
-        nonlocal nursery_nutrient_zones
+        nonlocal nursery_nutrient_zones, nursery_species, nursery_economy
         nonlocal nursery_reservoir_kg, nursery_uptake_kg, nursery_transpired_kg
         nonlocal nursery_drainage_kg
         rejection = require_auth_and_csrf(request)
@@ -585,6 +709,10 @@ def create_app() -> FastAPI:
             restored_nutrient_zones = nutrient_zones_from_payload(
                 state.get("nursery_nutrient_zones", []), restored_nursery
             )
+            restored_species = species_from_payload(
+                state.get("nursery_species", []), restored_nursery
+            )
+            restored_economy = economy_from_payload(state.get("nursery_economy", {}))
             restored_reservoir = float(
                 state.get("nursery_reservoir_kg", STARTER_RESERVOIR_KG)
             )
@@ -601,6 +729,8 @@ def create_app() -> FastAPI:
         nursery_organs = restored_nursery
         nursery_zones = restored_zones
         nursery_nutrient_zones = restored_nutrient_zones
+        nursery_species = restored_species
+        nursery_economy = restored_economy
         nursery_reservoir_kg = restored_reservoir
         nursery_uptake_kg = 0.0
         nursery_transpired_kg = 0.0
@@ -789,7 +919,7 @@ def create_app() -> FastAPI:
                 "zone_potassium_kg": projection.zone_potassium_kg,
             }
             for projection in project_plants(
-                nursery_organs, nursery_zones, nursery_nutrient_zones
+                nursery_organs, nursery_zones, nursery_nutrient_zones, nursery_species
             )
         ]
         return JSONResponse(
@@ -815,7 +945,7 @@ def create_app() -> FastAPI:
         projection = next(
             item
             for item in project_plants(
-                nursery_organs, nursery_zones, nursery_nutrient_zones
+                nursery_organs, nursery_zones, nursery_nutrient_zones, nursery_species
             )
             if item.plant_id == plant_id
         )

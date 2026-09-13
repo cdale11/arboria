@@ -28,7 +28,7 @@ from arboria.biology.water import advance_zone_water, apply_watering
 # R1 nursery dynamics are parameterized per starter plant by the species
 # catalog. All coefficients remain provisional, not measured constants.
 BASE_TICK_SECONDS = 300.0
-NURSERY_SCHEMA_VERSION = 3
+NURSERY_SCHEMA_VERSION = 4
 # Starter composition: plant 1 is greenhouse basil, plant 2 is an outdoor oak.
 # The mapping is deterministic code, so no extra persisted state is needed.
 SPECIES_BY_PLANT: dict[int, str] = {
@@ -102,6 +102,11 @@ def species_for_plant(plant_id: int) -> SpeciesRecord:
     if species_id is None:
         raise ValueError(f"no species assigned to plant {plant_id}")
     return get_species(species_id)
+
+
+def starter_species_by_plant() -> dict[int, str]:
+    """Create the deterministic starter plant-to-species mapping."""
+    return dict(SPECIES_BY_PLANT)
 
 
 def starter_plant_organs(
@@ -191,6 +196,109 @@ def starter_organs() -> list[Organ]:
         organ_id += 3
     validate_topology(organs)
     return organs
+
+
+def add_starter_plant(
+    organs: list[Organ],
+    zones: dict[int, float],
+    nutrient_zones: dict[int, NutrientZone],
+    species_by_plant: dict[int, str],
+    species_id: str,
+) -> tuple[list[Organ], dict[int, float], dict[int, NutrientZone], dict[int, str], int]:
+    """Add one live starter plant of a catalog species with fresh IDs."""
+    validate_topology(organs)
+    validate_zones(organs, zones)
+    validate_nutrient_zones(organs, nutrient_zones)
+    get_species(species_id)
+    plant_id = max((organ.plant_id for organ in organs), default=0) + 1
+    first_organ_id = max((organ.organ_id for organ in organs), default=0) + 1
+    if plant_id in zones or plant_id in nutrient_zones or plant_id in species_by_plant:
+        raise ValueError(f"plant {plant_id} already exists")
+    next_organs = list(organs) + starter_plant_organs(plant_id, species_id, first_organ_id)
+    next_zones = dict(zones)
+    next_zones[plant_id] = STARTER_ZONE_WATER_KG
+    next_nutrients = dict(nutrient_zones)
+    next_nutrients[plant_id] = NutrientZone(
+        nitrogen_kg=STARTER_ZONE_NITROGEN_KG,
+        phosphorus_kg=STARTER_ZONE_PHOSPHORUS_KG,
+        potassium_kg=STARTER_ZONE_POTASSIUM_KG,
+    )
+    next_mapping = dict(species_by_plant)
+    next_mapping[plant_id] = species_id
+    validate_topology(next_organs)
+    validate_zones(next_organs, next_zones)
+    validate_nutrient_zones(next_organs, next_nutrients)
+    return next_organs, next_zones, next_nutrients, next_mapping, plant_id
+
+
+def remove_plant(
+    organs: list[Organ],
+    zones: dict[int, float],
+    nutrient_zones: dict[int, NutrientZone],
+    species_by_plant: dict[int, str],
+    plant_id: int,
+) -> tuple[list[Organ], dict[int, float], dict[int, NutrientZone], dict[int, str], str]:
+    """Remove a live plant and its zones; return state plus its species."""
+    validate_topology(organs)
+    validate_zones(organs, zones)
+    validate_nutrient_zones(organs, nutrient_zones)
+    members = [organ for organ in organs if organ.plant_id == plant_id]
+    if not members:
+        raise ValueError("unknown plant")
+    root = next(organ for organ in members if organ.parent_id is None)
+    if not root.alive:
+        raise ValueError("dead plants cannot be sold")
+    if plant_id not in species_by_plant:
+        raise ValueError(f"no species assigned to plant {plant_id}")
+    species_id = species_by_plant[plant_id]
+    next_organs = [organ for organ in organs if organ.plant_id != plant_id]
+    next_zones = {key: value for key, value in zones.items() if key != plant_id}
+    next_nutrients = {
+        key: value for key, value in nutrient_zones.items() if key != plant_id
+    }
+    next_mapping = {
+        key: value for key, value in species_by_plant.items() if key != plant_id
+    }
+    validate_topology(next_organs)
+    if next_organs:
+        validate_zones(next_organs, next_zones)
+        validate_nutrient_zones(next_organs, next_nutrients)
+    return next_organs, next_zones, next_nutrients, next_mapping, species_id
+
+
+def species_to_payload(mapping: dict[int, str]) -> list[dict[str, object]]:
+    return [
+        {"plant_id": plant_id, "species_id": mapping[plant_id]}
+        for plant_id in sorted(mapping)
+    ]
+
+
+def species_from_payload(payload: object, organs: list[Organ]) -> dict[int, str]:
+    plant_ids = sorted({organ.plant_id for organ in organs})
+    if not isinstance(payload, list) or not payload:
+        mapping: dict[int, str] = {}
+        for plant_id in plant_ids:
+            species_id = SPECIES_BY_PLANT.get(plant_id)
+            if species_id is None:
+                raise ValueError(f"no species assigned to plant {plant_id}")
+            mapping[plant_id] = species_id
+        return mapping
+    mapping = {}
+    for entry in payload:
+        if not isinstance(entry, dict):
+            raise ValueError("nursery species payload must contain objects")
+        try:
+            plant_id = int(entry["plant_id"])
+            species_id = str(entry["species_id"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(f"invalid nursery species payload: {exc}") from exc
+        if plant_id in mapping:
+            raise ValueError("nursery species plant IDs cannot repeat")
+        get_species(species_id)
+        mapping[plant_id] = species_id
+    if sorted(mapping) != plant_ids:
+        raise ValueError("nursery species must exist for every plant exactly once")
+    return mapping
 
 
 def starter_zones() -> dict[int, float]:

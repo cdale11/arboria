@@ -2,6 +2,32 @@
 
 Records delivered work and actual evidence. Planned features belong in [ROADMAP.md](ROADMAP.md), not in claims of implemented behavior.
 
+## 2026-09-14 — R1 shop economy baseline
+
+### Added
+
+- Added integer-minor-unit cash economy with starting funds, provisional price table, and finite per-species buyer demand.
+- Added `shop.buy_water` reservoir refills with a 5.0 kg reservoir cap.
+- Added `shop.buy_plant` purchases that add live starter plants with fresh IDs, zones, and species mapping.
+- Added `shop.sell_plant` demand-limited sales that remove live plants; dead, unknown, and already-sold plants are rejected.
+- Persisted species mapping and economy state in checkpoint schema 4 with restore/startup fallback.
+- Exposed cash and demand in projections, summaries, stream snapshots, and UI.
+- Added kernel, inventory, API, duplicate-command, demand, anti-arbitrage, and persistence tests.
+- Added economy contract documentation and evidence.
+
+### Evidence and verification
+
+- `python -m pytest tests/unit` passed with 128 tests.
+- `ruff check .` passed.
+- `mypy src tests/unit` passed.
+- `npm --prefix web run check` passed.
+- `npm --prefix web run test` passed with 5 tests.
+- `npm --prefix web run build` passed.
+
+### Limitations
+
+- Shop baseline only: no fertilizer or amendment items, no seed/fruit/cutting products, no shop UI buttons (actions via API), no price forecasting, no supplier limits beyond demand counts, no species calibration, and no companion exists yet. All prices are provisional gameplay parameters, not market data.
+
 ## 2026-09-14 — R1 species catalog baseline
 
 ### Added

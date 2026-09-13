@@ -3,14 +3,20 @@ import pytest
 from arboria.biology.nutrients import NutrientZone
 from arboria.sim.nursery import (
     STARTER_RESERVOIR_KG,
+    add_starter_plant,
     advance_nursery,
     nutrient_zones_from_payload,
     nutrient_zones_to_payload,
     organs_from_payload,
     organs_to_payload,
     project_plants,
+    remove_plant,
+    species_from_payload,
+    species_to_payload,
     starter_nutrient_zones,
     starter_organs,
+    starter_plant_organs,
+    starter_species_by_plant,
     starter_zones,
     summarize,
     water_plant,
@@ -134,3 +140,77 @@ def test_watering_rejects_unknown_plant_and_over_limit() -> None:
         water_plant(starter_zones(), STARTER_RESERVOIR_KG, 999, 0.01)
     with pytest.raises(ValueError, match="per-command limit"):
         water_plant(starter_zones(), STARTER_RESERVOIR_KG, 1, 1.0)
+
+
+def test_add_starter_plant_grows_inventory_with_fresh_ids() -> None:
+    organs = starter_organs()
+    mapping = starter_species_by_plant()
+
+    next_organs, next_zones, next_nutrients, next_mapping, plant_id = add_starter_plant(
+        organs, starter_zones(), starter_nutrient_zones(), mapping, "crassula_ovata"
+    )
+
+    assert plant_id == 3
+    assert len(next_organs) == len(organs) + 3
+    assert next_mapping[3] == "crassula_ovata"
+    projections = project_plants(next_organs, next_zones, next_nutrients, next_mapping)
+    assert [item.plant_id for item in projections] == [1, 2, 3]
+    assert summarize(
+        next_organs, next_zones, next_nutrients, species_by_plant=next_mapping
+    ).plant_count == 3
+    with pytest.raises(ValueError, match="unknown species"):
+        add_starter_plant(organs, starter_zones(), starter_nutrient_zones(), mapping, "moss")
+
+
+def test_remove_plant_drops_topology_zones_and_mapping() -> None:
+    organs = starter_organs()
+    mapping = starter_species_by_plant()
+    grown, zones, nutrients, grown_mapping, _ = add_starter_plant(
+        organs, starter_zones(), starter_nutrient_zones(), mapping, "crassula_ovata"
+    )
+
+    next_organs, next_zones, next_nutrients, next_mapping, species_id = remove_plant(
+        grown, zones, nutrients, grown_mapping, 3
+    )
+
+    assert species_id == "crassula_ovata"
+    assert [organ.plant_id for organ in next_organs] == [1, 1, 1, 2, 2, 2]
+    assert sorted(next_zones) == [1, 2]
+    assert sorted(next_mapping) == [1, 2]
+    with pytest.raises(ValueError, match="unknown plant"):
+        remove_plant(next_organs, next_zones, next_nutrients, next_mapping, 3)
+
+
+def test_bought_plants_tick_with_their_species() -> None:
+    organs = starter_organs()
+    mapping = starter_species_by_plant()
+    grown, zones, nutrients, grown_mapping, _ = add_starter_plant(
+        organs, starter_zones(), starter_nutrient_zones(), mapping, "crassula_ovata"
+    )
+
+    result = advance_nursery(grown, zones, nutrients, 5, grown_mapping)
+
+    projections = project_plants(
+        result.organs, result.zones, result.nutrient_zones, grown_mapping
+    )
+    assert [item.species_id for item in projections] == [
+        "ocimum_basilicum",
+        "quercus_robur",
+        "crassula_ovata",
+    ]
+    assert all(item.alive for item in projections)
+
+
+def test_species_payload_round_trip_and_starter_fallback() -> None:
+    organs = starter_organs()
+    mapping = starter_species_by_plant()
+
+    restored = species_from_payload(species_to_payload(mapping), organs)
+
+    assert restored == mapping
+    assert species_from_payload([], organs) == mapping
+    with pytest.raises(ValueError, match="exactly once"):
+        species_from_payload([{"plant_id": 1, "species_id": "ocimum_basilicum"}], organs)
+    unmapped = starter_plant_organs(9, "crassula_ovata", 1)
+    with pytest.raises(ValueError, match="no species assigned"):
+        species_from_payload([], unmapped)

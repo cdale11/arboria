@@ -52,6 +52,8 @@ class CheckpointWriter:
         nursery_schema_version: int = 1,
         nursery_zones: list[dict[str, Any]] | None = None,
         nursery_nutrient_zones: list[dict[str, Any]] | None = None,
+        nursery_species: list[dict[str, Any]] | None = None,
+        nursery_economy: dict[str, Any] | None = None,
         nursery_reservoir_kg: float = 0.0,
     ) -> tuple[CheckpointRecord, dict[str, Any]]:
         self.checkpoints_dir.mkdir(parents=True, exist_ok=True)
@@ -83,6 +85,8 @@ class CheckpointWriter:
             "nursery_nutrient_zones": (
                 nursery_nutrient_zones if nursery_nutrient_zones is not None else []
             ),
+            "nursery_species": nursery_species if nursery_species is not None else [],
+            "nursery_economy": nursery_economy if nursery_economy is not None else {},
             "nursery_reservoir_kg": nursery_reservoir_kg,
         }
         state_bytes = self._write_json(tmp_dir / "state.json", state)

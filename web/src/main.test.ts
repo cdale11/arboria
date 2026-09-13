@@ -41,6 +41,8 @@ describe("dependency baseline app", () => {
           zone_potassium_kg: 0.008,
           dead_plant_count: 0,
           species_ids: ["ocimum_basilicum"],
+          cash_minor: 20000,
+          demand_remaining: [{ species_id: "ocimum_basilicum", remaining: 3 }],
         },
       },
       [
@@ -91,6 +93,8 @@ describe("dependency baseline app", () => {
           zone_potassium_kg: 0.008,
           dead_plant_count: 0,
           species_ids: ["ocimum_basilicum"],
+          cash_minor: 20000,
+          demand_remaining: [{ species_id: "ocimum_basilicum", remaining: 3 }],
         },
       },
       {
@@ -142,6 +146,8 @@ describe("dependency baseline app", () => {
         zone_potassium_kg: 0.008,
         dead_plant_count: 0,
         species_ids: ["ocimum_basilicum"],
+        cash_minor: 20000,
+        demand_remaining: [{ species_id: "ocimum_basilicum", remaining: 3 }],
       },
     };
     const plants = {
