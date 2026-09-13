@@ -31,6 +31,8 @@ Plant state includes developmental age, organ topology, genotype modifiers, reso
 
 Implemented R1 baseline biology currently includes pure organ topology validation and explicit resource pools only. `Organ` records have positive stable IDs, plant IDs, optional parent IDs, organ kind, created tick, developmental stage, geometry fields, alive/damage state, cohort count, and separate structural carbon, reserve carbon, water, nitrogen, phosphorus, and potassium pools. Validation rejects duplicate IDs, missing/cross-plant parents, cyclic parentage, nonfinite values, negative geometry/resources, invalid damage fractions, and non-cohort aggregate counts. Growth, light, water uptake, nutrients, stress, damage progression, death, species parameters, persistence integration, and UI are not implemented yet.
 
+Implemented R1 vegetative growth currently applies resource-bounded elongation to existing structural organs only. Growth demands debit reserve carbon, water, nitrogen, phosphorus, and potassium from the plant root organ, scale all demands by the limiting available resource, add structural carbon and associated material to the target organ, and never create new organs. Light-driven assimilation, root/substrate uptake, allocation priorities, organ initiation, stress responses, death, species grammars, and persistence integration remain unimplemented.
+
 ## 3. Generic update rules
 
 For a conserved pool `x` in kg:

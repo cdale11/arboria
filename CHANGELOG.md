@@ -460,3 +460,24 @@ Records delivered work and actual evidence. Planned features belong in [ROADMAP.
 ### Limitations
 
 - Biology baseline only: no growth, light, carbon assimilation, water/nutrient uptake, stress, damage progression, death, species catalog, persistence integration, commands, or UI exists yet.
+
+## 2026-09-13 — R1 vegetative-growth baseline
+
+### Added
+
+- Added pure resource-bounded vegetative growth kernel for existing structural organs.
+- Added finite, nonnegative growth demands that target existing root/stem/branch organs only.
+- Added limiting-resource scaling across reserve carbon, water, nitrogen, phosphorus, and potassium.
+- Added root-pool debits and target-organ resource/length increments without creating new organs.
+- Added biology tests for full growth, resource-limited growth, material accounting, invalid targets, and invalid demands.
+- Updated roadmap, biology docs, and evidence documentation.
+
+### Evidence and verification
+
+- `python -m pytest tests/unit/biology` passed with 12 tests.
+- `ruff check src/arboria/biology tests/unit/biology` passed.
+- `mypy src tests/unit` passed.
+
+### Limitations
+
+- Vegetative-growth baseline only: no photosynthesis, root/substrate uptake, light model, nutrient chemistry, organ initiation, stress/damage/death, species grammars, persistence integration, commands, or UI exists yet.
