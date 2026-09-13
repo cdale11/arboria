@@ -97,7 +97,7 @@ The first tick performs emergency planning before normal unattended progression 
 
 Current R1 implementation has a single in-process `WorldLoop` accumulator that consumes persisted clock state into 300-sim-second `sim_tick` and `world_revision` boundaries, with a bounded maximum of 100 ticks per drain. It does not run biological kernels, event processing, manager planning, or checkpoint scheduling yet.
 
-The writer services lifecycle controls (pause/resume, speed, save, restore, shutdown) between ticks even when biological progression is paused. These controls cannot depend on the next biological tick to execute: otherwise a paused world could never resume. Ordinary horticultural commands remain queued while paused. All queues have explicit limits and rejection responses; lifecycle admission has reserved capacity.
+The writer services lifecycle controls (pause/resume, speed, save, restore, shutdown) between ticks even when biological progression is paused. These controls cannot depend on the next biological tick to execute: otherwise a paused world could never resume. Current R1 implementation applies horticultural commands immediately against the frozen tick while paused rather than queueing them; a paused command queue with explicit limits and reserved lifecycle admission remains future work.
 
 ## 5. Commands and protocol
 

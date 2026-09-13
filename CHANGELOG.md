@@ -2,6 +2,26 @@
 
 Records delivered work and actual evidence. Planned features belong in [ROADMAP.md](ROADMAP.md), not in claims of implemented behavior.
 
+## 2026-09-14 — R1 lifecycle controls while paused
+
+### Added
+
+- Locked paused-world lifecycle behavior with sequence tests: frozen ticks with live commands, paused save/restore/speed/resume, and paused restart recovery.
+- Verified live SIGTERM shutdown while paused persists clock state and checkpoints; shutdown stays process-signal driven with no new endpoint.
+
+### Evidence and verification
+
+- `python -m pytest tests/unit` passed with 131 tests.
+- `ruff check .` passed.
+- `mypy src tests/unit` passed.
+- `npm --prefix web run check` passed.
+- `npm --prefix web run test` passed with 16 tests.
+- `npm --prefix web run build` passed.
+
+### Limitations
+
+- Lifecycle baseline only: horticultural commands apply immediately against a frozen tick rather than queueing while paused, there is no shutdown API endpoint, and no crash/disk-failure recovery, migration protocol, or failure-injection tests exist yet.
+
 ## 2026-09-14 — R1 desktop nursery controls
 
 ### Added

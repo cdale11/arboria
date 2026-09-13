@@ -47,7 +47,7 @@ Dependency: P0. This is the first playable release, not a skeleton server.
 - [x] Implement server-owned in-memory 48× simulation clock with authenticated status, pause, resume, and speed controls. Evidence: `docs/evidence/R1-clock-baseline.md`.
 - [x] Persist clock/world lifecycle state so restart resumes saved simulation time without wall-clock catch-up. Evidence: `docs/evidence/R1-world-metadata.md`.
 - [x] Implement one-writer world loop consuming clock ticks at the documented 300-sim-second base tick. Evidence: `docs/evidence/R1-world-loop.md`.
-- [ ] Add lifecycle controls for pause/resume/save/restore/shutdown that remain serviceable while biological progression is paused.
+- [x] Add lifecycle controls for pause/resume/save/restore/shutdown that remain serviceable while biological progression is paused. Evidence: `docs/evidence/R1-lifecycle.md`.
 - [x] Implement minimal living-nursery tick with starter plants, biological projections, inspection, and lifecycle controls. Evidence: `docs/evidence/R1-living-nursery.md`.
 
 #### Persistence and recovery
