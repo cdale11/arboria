@@ -4,7 +4,7 @@ A persistent, biologically grounded nursery and plant-shop simulation with proce
 
 ## Project status
 
-**Authenticated living-nursery baseline with two ticking starter plants, root-zone water with finite reservoir watering, substrate N/P/K uptake with deficiency stress, damage, and death, inspection projections, clock/save controls, and biology checkpoints. No fertilizer input, species catalog, shop economy, companion, procedural 2.5D rendering, or touch controls have been implemented yet.** The documents in this repository define intended behavior and delivery gates; they are not evidence that the described features work. See [ROADMAP.md](ROADMAP.md) for implementation status.
+**Authenticated living-nursery baseline with two ticking starter plants (greenhouse basil and outdoor oak from a six-species provisional catalog), root-zone water with finite reservoir watering, substrate N/P/K uptake with deficiency stress, damage, and death, inspection projections, clock/save controls, and biology checkpoints. No fertilizer input, species calibration, shop economy, companion, procedural 2.5D rendering, or touch controls have been implemented yet.** The documents in this repository define intended behavior and delivery gates; they are not evidence that the described features work. See [ROADMAP.md](ROADMAP.md) for implementation status.
 
 ## The game
 

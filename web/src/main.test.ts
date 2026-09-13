@@ -40,6 +40,7 @@ describe("dependency baseline app", () => {
           zone_phosphorus_kg: 0.004,
           zone_potassium_kg: 0.008,
           dead_plant_count: 0,
+          species_ids: ["ocimum_basilicum"],
         },
       },
       [
@@ -52,6 +53,8 @@ describe("dependency baseline app", () => {
           structural_carbon_kg: 0.036,
           zone_water_kg: 0.12,
           water_stress_factor: 0.74,
+          species_id: "ocimum_basilicum",
+          site_id: "greenhouse",
           alive: true,
           damage_fraction: 0.0,
           nutrient_stress_factor: 1.0,
@@ -87,6 +90,7 @@ describe("dependency baseline app", () => {
           zone_phosphorus_kg: 0.004,
           zone_potassium_kg: 0.008,
           dead_plant_count: 0,
+          species_ids: ["ocimum_basilicum"],
         },
       },
       {
@@ -100,6 +104,8 @@ describe("dependency baseline app", () => {
             structural_carbon_kg: 0.036,
             zone_water_kg: 0.12,
             water_stress_factor: 0.74,
+            species_id: "ocimum_basilicum",
+            site_id: "greenhouse",
             alive: true,
             damage_fraction: 0.0,
             nutrient_stress_factor: 1.0,
@@ -135,6 +141,7 @@ describe("dependency baseline app", () => {
         zone_phosphorus_kg: 0.004,
         zone_potassium_kg: 0.008,
         dead_plant_count: 0,
+        species_ids: ["ocimum_basilicum"],
       },
     };
     const plants = {
@@ -148,6 +155,8 @@ describe("dependency baseline app", () => {
           structural_carbon_kg: 0.036,
           zone_water_kg: 0.12,
           water_stress_factor: 0.74,
+          species_id: "ocimum_basilicum",
+          site_id: "greenhouse",
           alive: true,
           damage_fraction: 0.0,
           nutrient_stress_factor: 1.0,

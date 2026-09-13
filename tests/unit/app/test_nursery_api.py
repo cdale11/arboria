@@ -36,6 +36,16 @@ def test_plants_list_reports_starter_nursery(
     assert payload["nursery"]["reservoir_kg"] == 2.0
     assert payload["nursery"]["dead_plant_count"] == 0
     assert payload["nursery"]["zone_nitrogen_kg"] > 0.0
+    assert payload["nursery"]["species_ids"] == [
+        "ocimum_basilicum",
+        "quercus_robur",
+    ]
+    assert len(payload["plants"]) == 2
+    assert payload["plants"][0]["plant_id"] == 1
+    assert payload["plants"][0]["species_id"] == "ocimum_basilicum"
+    assert payload["plants"][0]["site_id"] == "greenhouse"
+    assert payload["plants"][1]["species_id"] == "quercus_robur"
+    assert payload["plants"][1]["site_id"] == "outdoor"
     assert len(payload["plants"]) == 2
     assert payload["plants"][0]["plant_id"] == 1
     assert payload["plants"][0]["organ_count"] == 3

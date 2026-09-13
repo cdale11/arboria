@@ -1,5 +1,7 @@
 export interface PlantSummary {
   plant_id: number;
+  species_id: string;
+  site_id: string;
   organ_count: number;
   leaf_area_m2: number;
   stem_length_m: number;
@@ -21,6 +23,7 @@ export interface NurseryWorld {
   nursery: {
     plant_count: number;
     organ_count: number;
+    species_ids: string[];
     reserve_carbon_kg: number;
     structural_carbon_kg: number;
     atmospheric_carbon_uptake_kg: number;
@@ -52,7 +55,8 @@ export function formatPlantSummary(plant: PlantSummary): string {
     ? `damage ${(plant.damage_fraction * 100).toFixed(1)}%`
     : "dead";
   return (
-    `Plant ${plant.plant_id}: ${plant.organ_count} organs, ` +
+    `Plant ${plant.plant_id} (${plant.species_id}, ${plant.site_id}): ` +
+    `${plant.organ_count} organs, ` +
     `stem ${plant.stem_length_m.toFixed(3)} m, ` +
     `leaf ${plant.leaf_area_m2.toFixed(3)} m2, ` +
     `reserve C ${plant.reserve_carbon_kg.toExponential(2)} kg, ` +
@@ -76,6 +80,7 @@ export function renderNurseryApp(
     `Tick ${world.sim_tick}, revision ${world.world_revision}, ` +
     `${world.nursery.plant_count} plants, ${world.nursery.organ_count} organs, ` +
     `${world.nursery.dead_plant_count} dead. ` +
+    `Species: ${world.nursery.species_ids.join(", ")}. ` +
     `Reserve carbon ${world.nursery.reserve_carbon_kg.toExponential(2)} kg, ` +
     `zone water ${world.nursery.zone_water_kg.toFixed(3)} kg, ` +
     `zone N/P/K ${world.nursery.zone_nitrogen_kg.toExponential(2)}/` +
@@ -149,6 +154,13 @@ export function parseNurseryApi(worldJson: unknown, plantsJson: unknown): Nurser
   if (numbers.some((value) => value === null)) {
     return null;
   }
+  const speciesIds = nursery["species_ids"];
+  if (
+    !Array.isArray(speciesIds) ||
+    speciesIds.some((value) => typeof value !== "string")
+  ) {
+    return null;
+  }
   const parsedPlants: PlantSummary[] = [];
   for (const entry of plants) {
     if (!isRecord(entry)) {
@@ -175,8 +187,13 @@ export function parseNurseryApi(worldJson: unknown, plantsJson: unknown): Nurser
     if (typeof entry["alive"] !== "boolean") {
       return null;
     }
+    if (typeof entry["species_id"] !== "string" || typeof entry["site_id"] !== "string") {
+      return null;
+    }
     parsedPlants.push({
       plant_id: fields[0] as number,
+      species_id: entry["species_id"] as string,
+      site_id: entry["site_id"] as string,
       organ_count: fields[1] as number,
       leaf_area_m2: fields[2] as number,
       stem_length_m: fields[3] as number,
@@ -210,6 +227,7 @@ export function parseNurseryApi(worldJson: unknown, plantsJson: unknown): Nurser
         zone_phosphorus_kg: numbers[10] as number,
         zone_potassium_kg: numbers[11] as number,
         dead_plant_count: numbers[12] as number,
+        species_ids: speciesIds as string[],
       },
     },
     plants: parsedPlants,

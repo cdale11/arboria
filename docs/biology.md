@@ -37,6 +37,8 @@ Implemented R1 carbon assimilation currently uses the documented provisional sat
 
 Implemented R1 living nursery currently ticks two deterministic starter plants through zone-coupled water exchange, water-stressed assimilation, substrate N/P/K uptake, deficiency stress, irreversible damage, and death. Each plant owns a well-mixed 0.20 kg root zone starting at 0.12 kg plus finite substrate N/P/K starting at 0.020/0.0040/0.0080 kg with no fertilizer input; a finite 2.0 kg reservoir supplies receipt-backed watering commands with a 0.05 kg per-command limit and explicit drainage. Live nutrient stress feeds assimilation; combined water/nutrient stress below 0.5 accrues organ damage and kills at damage 1.0, and dead plants stop ticking. Nursery organs, water zones, nutrient zones, and reservoir persist in checkpoint state and recover on restore/startup. Layered substrate, waterlogging, fertilizer input, damage recovery, and calibration remain unimplemented.
 
+Implemented R1 species catalog currently holds six representative species with provisional parameters only: sweet basil and tomato (greenhouse), weeping fig (greenhouse), jade plant (greenhouse, CAM physiology approximated with the C3 response), garden juniper (outdoor), and English oak (outdoor). Starter plant 1 grows basil in the greenhouse and starter plant 2 grows oak outdoors; per-plant assimilation, water, nutrient, growth, and damage coefficients plus site PAR come from the catalog. Starter geometry is shared across species. See `docs/species.md` for the catalog contract and per-species supported, approximated, and unsupported processes.
+
 ## 3. Generic update rules
 
 For a conserved pool `x` in kg:

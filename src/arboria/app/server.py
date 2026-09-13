@@ -201,6 +201,7 @@ def create_app() -> FastAPI:
             "schema_version": NURSERY_SCHEMA_VERSION,
             "plant_count": summary.plant_count,
             "organ_count": summary.organ_count,
+            "species_ids": list(summary.species_ids),
             "reserve_carbon_kg": summary.reserve_carbon_kg,
             "structural_carbon_kg": summary.structural_carbon_kg,
             "atmospheric_carbon_uptake_kg": summary.atmospheric_carbon_uptake_kg,
@@ -771,6 +772,8 @@ def create_app() -> FastAPI:
         plants = [
             {
                 "plant_id": projection.plant_id,
+                "species_id": projection.species_id,
+                "site_id": projection.site_id,
                 "organ_count": projection.organ_count,
                 "leaf_area_m2": projection.leaf_area_m2,
                 "stem_length_m": projection.stem_length_m,
@@ -821,6 +824,8 @@ def create_app() -> FastAPI:
                 "revision": loop.world_revision,
                 "sim_tick": loop.sim_tick,
                 "plant_id": plant_id,
+                "species_id": projection.species_id,
+                "site_id": projection.site_id,
                 "alive": projection.alive,
                 "damage_fraction": projection.damage_fraction,
                 "zone_water_kg": projection.zone_water_kg,

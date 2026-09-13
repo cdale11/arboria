@@ -2,6 +2,30 @@
 
 Records delivered work and actual evidence. Planned features belong in [ROADMAP.md](ROADMAP.md), not in claims of implemented behavior.
 
+## 2026-09-14 — R1 species catalog baseline
+
+### Added
+
+- Added six-species catalog with greenhouse/outdoor sites and explicitly provisional parameters.
+- Parameterized nursery ticks by species: assimilation, water, nutrient, growth, damage coefficients, and site PAR.
+- Starter plant 1 grows greenhouse basil; starter plant 2 grows outdoor oak; starter root N/P/K matches species references.
+- Exposed species/site in projections, summaries, stream snapshots, and UI.
+- Added catalog validation tests and six reviewed 200-tick watered reference scenarios.
+- Added species catalog documentation with per-species supported/approximated/unsupported coverage.
+
+### Evidence and verification
+
+- `python -m pytest tests/unit` passed with 106 tests.
+- `ruff check .` passed.
+- `mypy src tests/unit` passed.
+- `npm --prefix web run check` passed.
+- `npm --prefix web run test` passed with 5 tests.
+- `npm --prefix web run build` passed.
+
+### Limitations
+
+- Species baseline only: shared starter geometry with no morphology grammar, no measured species constants, CAM approximated with the C3 response, no fertilizer input, no reproduction, dormancy, pruning response, economy, or companion exists yet.
+
 ## 2026-09-14 — R1 nutrient stress, damage, and death baseline
 
 ### Added
