@@ -126,6 +126,7 @@ def create_app() -> FastAPI:
     nursery_zones = starter_zones()
     nursery_nutrient_zones = starter_nutrient_zones()
     nursery_species = starter_species_by_plant()
+    nursery_protected_plants: set[int] = set()
     nursery_reservoir_kg = STARTER_RESERVOIR_KG
     nursery_economy = starter_economy()
     nursery_uptake_kg = 0.0
@@ -143,6 +144,7 @@ def create_app() -> FastAPI:
         """
         nonlocal nursery_organs, nursery_zones, nursery_nutrient_zones
         nonlocal nursery_species, nursery_economy, nursery_reservoir_kg
+        nonlocal nursery_protected_plants
         nonlocal world_metadata
         try:
             nursery_organs = organs_from_payload(state.get("nursery_organs", []))
@@ -155,6 +157,14 @@ def create_app() -> FastAPI:
         nursery_species = loaded.species_by_plant
         try:
             nursery_economy = economy_from_payload(state.get("nursery_economy", {}))
+            protected_raw = state.get("nursery_protected_plants", [])
+            if not isinstance(protected_raw, list):
+                raise ValueError("nursery_protected_plants must be a list")
+            plant_ids = {organ.plant_id for organ in nursery_organs}
+            protected = {int(item) for item in protected_raw}
+            if not protected.issubset(plant_ids):
+                raise ValueError("protected plants must exist")
+            nursery_protected_plants = protected
             nursery_reservoir_kg = float(
                 state.get("nursery_reservoir_kg", STARTER_RESERVOIR_KG)
             )
@@ -167,6 +177,7 @@ def create_app() -> FastAPI:
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         nonlocal clock, world_loop, world_metadata, nursery_organs, nursery_zones
         nonlocal nursery_nutrient_zones, nursery_species, nursery_economy
+        nonlocal nursery_protected_plants
         nonlocal nursery_reservoir_kg, nursery_uptake_kg, nursery_transpired_kg
         nonlocal nursery_drainage_kg
         lock.acquire()
@@ -209,6 +220,7 @@ def create_app() -> FastAPI:
                     nursery_nutrient_zones = starter_nutrient_zones()
                     nursery_species = starter_species_by_plant()
                     nursery_economy = starter_economy()
+                    nursery_protected_plants = set()
                     nursery_reservoir_kg = STARTER_RESERVOIR_KG
             clock = SimulationClock.from_state(world_metadata.clock)
             world_loop = WorldLoop(world_metadata.loop)
@@ -288,6 +300,7 @@ def create_app() -> FastAPI:
             "zone_phosphorus_kg": summary.zone_phosphorus_kg,
             "zone_potassium_kg": summary.zone_potassium_kg,
             "dead_plant_count": summary.dead_plant_count,
+            "protected_plant_ids": sorted(nursery_protected_plants),
             "cash_minor": nursery_economy.cash_minor,
             "demand_remaining": [
                 {"species_id": species_id, "remaining": remaining}
@@ -314,6 +327,7 @@ def create_app() -> FastAPI:
     def apply_command(envelope: CommandEnvelope) -> dict[str, Any]:
         nonlocal nursery_organs, nursery_zones, nursery_nutrient_zones
         nonlocal nursery_species, nursery_economy
+        nonlocal nursery_protected_plants
         nonlocal nursery_reservoir_kg, nursery_drainage_kg
         if envelope.kind == "clock.pause":
             if envelope.payload:
@@ -416,6 +430,7 @@ def create_app() -> FastAPI:
             nursery_zones = next_zones
             nursery_nutrient_zones = next_nutrients
             nursery_species = next_mapping
+            nursery_protected_plants.discard(plant_id)
             return {
                 "nursery": nursery_payload(),
                 "plant_id": plant_id,
@@ -432,6 +447,8 @@ def create_app() -> FastAPI:
                     f"invalid shop.sell_plant payload: {exc}"
                 ) from exc
             tick_world()
+            if sell_id in nursery_protected_plants:
+                raise CommandValidationError("plant is protected")
             try:
                 (next_organs, next_zones, next_nutrients, next_mapping, sold_species) = (
                     remove_plant(
@@ -450,12 +467,39 @@ def create_app() -> FastAPI:
             nursery_zones = next_zones
             nursery_nutrient_zones = next_nutrients
             nursery_species = next_mapping
+            nursery_protected_plants.discard(sell_id)
             return {
                 "nursery": nursery_payload(),
                 "plant_id": sell_id,
                 "species_id": sold_species,
                 "credit_minor": credit,
             }
+        if envelope.kind == "nursery.protect":
+            if set(envelope.payload) != {"plant_id"}:
+                raise CommandValidationError("nursery.protect requires plant_id")
+            try:
+                protected_id = int(envelope.payload["plant_id"])
+            except (TypeError, ValueError) as exc:
+                raise CommandValidationError(
+                    f"invalid nursery.protect payload: {exc}"
+                ) from exc
+            if protected_id not in {organ.plant_id for organ in nursery_organs}:
+                raise CommandValidationError("unknown plant")
+            nursery_protected_plants.add(protected_id)
+            return {"nursery": nursery_payload(), "plant_id": protected_id}
+        if envelope.kind == "nursery.unprotect":
+            if set(envelope.payload) != {"plant_id"}:
+                raise CommandValidationError("nursery.unprotect requires plant_id")
+            try:
+                unprotected_id = int(envelope.payload["plant_id"])
+            except (TypeError, ValueError) as exc:
+                raise CommandValidationError(
+                    f"invalid nursery.unprotect payload: {exc}"
+                ) from exc
+            if unprotected_id not in {organ.plant_id for organ in nursery_organs}:
+                raise CommandValidationError("unknown plant")
+            nursery_protected_plants.discard(unprotected_id)
+            return {"nursery": nursery_payload(), "plant_id": unprotected_id}
         raise CommandValidationError("unknown command kind")
 
     def save_clock_status() -> dict[str, float | int | bool]:
@@ -494,6 +538,7 @@ def create_app() -> FastAPI:
             nursery_nutrient_zones=nutrient_zones_to_payload(nursery_nutrient_zones),
             nursery_species=species_to_payload(nursery_species),
             nursery_economy=economy_to_payload(nursery_economy),
+            nursery_protected_plants=sorted(nursery_protected_plants),
             nursery_reservoir_kg=nursery_reservoir_kg,
         )
         metadata_store.register_checkpoint(
@@ -719,6 +764,7 @@ def create_app() -> FastAPI:
     async def restore_save(request: Request) -> Response:
         nonlocal clock, world_loop, world_metadata, nursery_organs, nursery_zones
         nonlocal nursery_nutrient_zones, nursery_species, nursery_economy
+        nonlocal nursery_protected_plants
         nonlocal nursery_reservoir_kg, nursery_uptake_kg, nursery_transpired_kg
         nonlocal nursery_drainage_kg
         rejection = require_auth_and_csrf(request)
@@ -758,6 +804,13 @@ def create_app() -> FastAPI:
             restored_nutrient_zones = loaded.nutrient_zones
             restored_species = loaded.species_by_plant
             restored_economy = economy_from_payload(state.get("nursery_economy", {}))
+            restored_protected_raw = state.get("nursery_protected_plants", [])
+            if not isinstance(restored_protected_raw, list):
+                raise ValueError("nursery_protected_plants must be a list")
+            restored_plant_ids = {organ.plant_id for organ in restored_nursery}
+            restored_protected = {int(item) for item in restored_protected_raw}
+            if not restored_protected.issubset(restored_plant_ids):
+                raise ValueError("protected plants must exist")
             restored_reservoir = float(
                 state.get("nursery_reservoir_kg", STARTER_RESERVOIR_KG)
             )
@@ -776,6 +829,7 @@ def create_app() -> FastAPI:
         nursery_nutrient_zones = restored_nutrient_zones
         nursery_species = restored_species
         nursery_economy = restored_economy
+        nursery_protected_plants = restored_protected
         nursery_reservoir_kg = restored_reservoir
         nursery_uptake_kg = 0.0
         nursery_transpired_kg = 0.0
@@ -1006,6 +1060,7 @@ def create_app() -> FastAPI:
                 "plant_id": projection.plant_id,
                 "species_id": projection.species_id,
                 "site_id": projection.site_id,
+                "protected": projection.plant_id in nursery_protected_plants,
                 "organ_count": projection.organ_count,
                 "leaf_area_m2": projection.leaf_area_m2,
                 "stem_length_m": projection.stem_length_m,
@@ -1058,6 +1113,7 @@ def create_app() -> FastAPI:
                 "plant_id": plant_id,
                 "species_id": projection.species_id,
                 "site_id": projection.site_id,
+                "protected": projection.plant_id in nursery_protected_plants,
                 "alive": projection.alive,
                 "damage_fraction": projection.damage_fraction,
                 "zone_water_kg": projection.zone_water_kg,

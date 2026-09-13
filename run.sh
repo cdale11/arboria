@@ -86,6 +86,11 @@ if [[ "$current_fingerprint" != "$previous_fingerprint" ]]; then
   printf '%s\n' "$current_fingerprint" > "$build_stamp"
 fi
 
+if [[ "${ARBORIA_LAUNCHER_CHECK:-0}" == "1" ]]; then
+  printf '%s\n' "Launcher check passed; not starting server."
+  exit 0
+fi
+
 printf 'Serving Arboria baseline at http://localhost:%s\n' "$port"
 printf 'LAN clients should use this machine address with port %s. Do not browse to 0.0.0.0.\n' "$port"
 exec python -m uvicorn arboria.app.server:app --host "$host" --port "$port"

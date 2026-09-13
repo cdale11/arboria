@@ -7,7 +7,7 @@
     "build": "vite build",
     "check": "tsc --noEmit",
     "test": "vitest run --environment jsdom",
-    "test:e2e": "node -e \"throw new Error('R1 browser e2e suite is not implemented yet')\""
+    "test:e2e": "vitest run --environment jsdom src/e2e.test.ts"
   },
   "dependencies": {
     "@vitejs/plugin-basic-ssl": "2.1.0",

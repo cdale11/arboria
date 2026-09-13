@@ -27,9 +27,9 @@ Dependency: P0. This is the first playable release, not a skeleton server.
 
 - [x] Resolve and lock the baseline Conda Python/numerical/server/test stack. Evidence: `docs/evidence/R1-dependencies.md`.
 - [x] Resolve and lock the environment-local npm TypeScript/Vite/Three.js/Vitest stack. Evidence: `docs/evidence/R1-dependencies.md`.
-- [ ] Select and lock browser e2e tooling compatible with the Conda/npm policy.
+- [x] Select and lock browser e2e tooling compatible with the Conda/npm policy. Evidence: `docs/evidence/R1-ui-controls.md`.
 - [x] Provide baseline `./run.sh` that activates `arboria`, prioritizes Conda Node/npm, builds the current frontend, and starts Uvicorn. Evidence: `docs/evidence/R1-launcher-server.md`.
-- [ ] Complete full R1 launcher gates: lock fingerprint synchronization, migration checks, interrupted-build recovery, offline repeat-start evidence, and failure-injection tests.
+- [x] Complete full R1 launcher gates: lock fingerprint synchronization, migration checks, interrupted-build recovery, offline repeat-start evidence, and failure-injection tests. Evidence: `docs/evidence/R1-launcher-gates.md` and `docs/evidence/R1-recovery.md`.
 
 #### Access, ownership, and commands
 
@@ -78,7 +78,7 @@ Dependency: P0. This is the first playable release, not a skeleton server.
 
 - [ ] Implement procedural 2.5D nursery rendering with generated assets and no gameplay dependence on visual level of detail.
 - [x] Implement usable desktop inspection, care, shop, save, and clock controls. Evidence: `docs/evidence/R1-ui-controls.md`.
-- [ ] Implement usable touch inspection and care controls meeting the 44px target and 360px layout requirements, plus plant protection controls.
+- [x] Implement usable touch inspection and care controls meeting the 44px target and 360px layout requirements, plus plant protection controls. Evidence: `docs/evidence/R1-ui-controls.md`.
 - [x] Implement minimal usable inspection, save, and clock controls for the living nursery. Evidence: `docs/evidence/R1-living-nursery.md`.
 - [x] Implement real inventory, suppliers, purchases, demand-limited plant sales, and finite cash/material accounting. Evidence: `docs/evidence/R1-economy.md`.
 - [x] Add economy tests for transaction consistency, duplicate sales, bounded demand, and anti-arbitrage. Evidence: `docs/evidence/R1-economy.md`.

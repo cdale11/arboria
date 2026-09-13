@@ -48,6 +48,7 @@ describe("dependency baseline app", () => {
           species_ids: ["ocimum_basilicum"],
           cash_minor: 20000,
           demand_remaining: [{ species_id: "ocimum_basilicum", remaining: 3 }],
+          protected_plant_ids: [],
         },
       },
       [
@@ -62,6 +63,7 @@ describe("dependency baseline app", () => {
           water_stress_factor: 0.74,
           species_id: "ocimum_basilicum",
           site_id: "greenhouse",
+          protected: false,
           alive: true,
           damage_fraction: 0.0,
           nutrient_stress_factor: 1.0,
@@ -100,6 +102,7 @@ describe("dependency baseline app", () => {
           species_ids: ["ocimum_basilicum"],
           cash_minor: 20000,
           demand_remaining: [{ species_id: "ocimum_basilicum", remaining: 3 }],
+          protected_plant_ids: [],
         },
       },
       {
@@ -115,6 +118,7 @@ describe("dependency baseline app", () => {
             water_stress_factor: 0.74,
             species_id: "ocimum_basilicum",
             site_id: "greenhouse",
+            protected: false,
             alive: true,
             damage_fraction: 0.0,
             nutrient_stress_factor: 1.0,
@@ -153,6 +157,7 @@ describe("dependency baseline app", () => {
         species_ids: ["ocimum_basilicum"],
         cash_minor: 20000,
         demand_remaining: [{ species_id: "ocimum_basilicum", remaining: 3 }],
+        protected_plant_ids: [],
       },
     };
     const plants = {
@@ -168,6 +173,7 @@ describe("dependency baseline app", () => {
           water_stress_factor: 0.74,
           species_id: "ocimum_basilicum",
           site_id: "greenhouse",
+          protected: false,
           alive: true,
           damage_fraction: 0.0,
           nutrient_stress_factor: 1.0,
@@ -209,6 +215,7 @@ function stubApiData(): NurseryApi {
         species_ids: ["ocimum_basilicum"],
         cash_minor: 20000,
         demand_remaining: [{ species_id: "ocimum_basilicum", remaining: 3 }],
+        protected_plant_ids: [],
         reserve_carbon_kg: 0.01,
         structural_carbon_kg: 0.036,
         atmospheric_carbon_uptake_kg: 0.00001,
@@ -227,6 +234,7 @@ function stubApiData(): NurseryApi {
         plant_id: 1,
         species_id: "ocimum_basilicum",
         site_id: "greenhouse",
+        protected: false,
         organ_count: 3,
         leaf_area_m2: 0.06,
         stem_length_m: 0.18,
@@ -252,6 +260,7 @@ function stubClient(overrides: Partial<NurseryClient> = {}): NurseryClient {
       plant_id: plantId,
       species_id: "ocimum_basilicum",
       site_id: "greenhouse",
+      protected: false,
       alive: true,
       organs: [{ organ_id: 1, kind: "root", alive: true, damage_fraction: 0 }],
     }),
@@ -339,6 +348,7 @@ describe("nursery controls", () => {
       "inspect",
       "water",
       "sell",
+      "protect",
       "buy-water",
       "buy-plant",
       "pause",
@@ -393,6 +403,28 @@ describe("nursery controls", () => {
     clickAction(target, "buy-plant");
     await vi.waitFor(() => expect(sendCommand).toHaveBeenCalledWith("shop.buy_plant", {
       species_id: "ocimum_basilicum",
+    }));
+  });
+
+  it("protects and unprotects plants through validated commands", async () => {
+    const sendCommand = vi.fn(async () => ({ status: "applied", reason: null }));
+    const firstLoad = stubApiData();
+    const protectedLoad = stubApiData();
+    firstLoad.plants[0]!.protected = false;
+    protectedLoad.plants[0]!.protected = true;
+    protectedLoad.world.nursery.protected_plant_ids = [1];
+    let loads = 0;
+    const load = vi.fn(async () => (loads++ === 0 ? firstLoad : protectedLoad));
+    const { target } = await mountedClient({ load, sendCommand });
+
+    clickAction(target, "protect", 1);
+    await vi.waitFor(() => expect(sendCommand).toHaveBeenCalledWith("nursery.protect", {
+      plant_id: 1,
+    }));
+    await vi.waitFor(() => expect(target.querySelector('[data-action="unprotect"]')).not.toBeNull());
+    clickAction(target, "unprotect", 1);
+    await vi.waitFor(() => expect(sendCommand).toHaveBeenCalledWith("nursery.unprotect", {
+      plant_id: 1,
     }));
   });
 

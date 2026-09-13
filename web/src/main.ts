@@ -2,6 +2,7 @@ export interface PlantSummary {
   plant_id: number;
   species_id: string;
   site_id: string;
+  protected: boolean;
   organ_count: number;
   leaf_area_m2: number;
   stem_length_m: number;
@@ -37,6 +38,7 @@ export interface NurseryWorld {
     zone_phosphorus_kg: number;
     zone_potassium_kg: number;
     dead_plant_count: number;
+    protected_plant_ids: number[];
   };
 }
 
@@ -169,8 +171,13 @@ export function parseNurseryApi(worldJson: unknown, plantsJson: unknown): Nurser
     return null;
   }
   const cashMinor = toNumber(nursery["cash_minor"]);
+  const protectedRaw = nursery["protected_plant_ids"];
   const demandRaw = nursery["demand_remaining"];
-  if (cashMinor === null || !Array.isArray(demandRaw)) {
+  if (cashMinor === null || !Array.isArray(demandRaw) || !Array.isArray(protectedRaw)) {
+    return null;
+  }
+  const protectedIds = protectedRaw.map(toNumber);
+  if (protectedIds.some((value) => value === null)) {
     return null;
   }
   const demand: { species_id: string; remaining: number }[] = [];
@@ -210,6 +217,9 @@ export function parseNurseryApi(worldJson: unknown, plantsJson: unknown): Nurser
     if (typeof entry["alive"] !== "boolean") {
       return null;
     }
+    if (typeof entry["protected"] !== "boolean") {
+      return null;
+    }
     if (typeof entry["species_id"] !== "string" || typeof entry["site_id"] !== "string") {
       return null;
     }
@@ -217,6 +227,7 @@ export function parseNurseryApi(worldJson: unknown, plantsJson: unknown): Nurser
       plant_id: fields[0] as number,
       species_id: entry["species_id"] as string,
       site_id: entry["site_id"] as string,
+      protected: entry["protected"] as boolean,
       organ_count: fields[1] as number,
       leaf_area_m2: fields[2] as number,
       stem_length_m: fields[3] as number,
@@ -253,6 +264,7 @@ export function parseNurseryApi(worldJson: unknown, plantsJson: unknown): Nurser
         species_ids: speciesIds as string[],
         cash_minor: cashMinor,
         demand_remaining: demand,
+        protected_plant_ids: protectedIds as number[],
       },
     },
     plants: parsedPlants,
@@ -308,6 +320,7 @@ export interface PlantDetail {
   plant_id: number;
   species_id: string;
   site_id: string;
+  protected: boolean;
   alive: boolean;
   organs: PlantOrgan[];
 }
@@ -429,6 +442,7 @@ export function createApiClient(
       plantId === null ||
       typeof payload["species_id"] !== "string" ||
       typeof payload["site_id"] !== "string" ||
+      typeof payload["protected"] !== "boolean" ||
       typeof payload["alive"] !== "boolean" ||
       !Array.isArray(organs)
     ) {
@@ -460,6 +474,7 @@ export function createApiClient(
       plant_id: plantId,
       species_id: payload["species_id"] as string,
       site_id: payload["site_id"] as string,
+      protected: payload["protected"] as boolean,
       alive: payload["alive"] as boolean,
       organs: parsedOrgans,
     };
@@ -546,6 +561,8 @@ export interface ControlCallbacks {
   onInspect(plantId: number): void;
   onWater(plantId: number): void;
   onSell(plantId: number): void;
+  onProtect(plantId: number): void;
+  onUnprotect(plantId: number): void;
   onBuyWater(): void;
   onBuyPlant(speciesId: string): void;
   onPause(): void;
@@ -615,6 +632,19 @@ export function renderControlPanel(
         button.disabled = true;
         callbacks.onSell(plant.plant_id);
       }, { plantId: String(plant.plant_id) }),
+      document.createTextNode(" "),
+      actionButton(
+        plant.protected ? "Unprotect" : "Protect",
+        plant.protected ? "unprotect" : "protect",
+        () => {
+          if (plant.protected) {
+            callbacks.onUnprotect(plant.plant_id);
+          } else {
+            callbacks.onProtect(plant.plant_id);
+          }
+        },
+        { plantId: String(plant.plant_id) },
+      ),
     );
     care.append(row);
   }
@@ -758,6 +788,8 @@ export async function mountNurseryApp(
           water_kg: 0.02,
         }),
         onSell: (plantId) => void runCommand("shop.sell_plant", { plant_id: plantId }),
+        onProtect: (plantId) => void runCommand("nursery.protect", { plant_id: plantId }),
+        onUnprotect: (plantId) => void runCommand("nursery.unprotect", { plant_id: plantId }),
         onBuyWater: () => void runCommand("shop.buy_water", { water_kg: 0.5 }),
         onBuyPlant: (speciesId) => void runCommand("shop.buy_plant", {
           species_id: speciesId,

@@ -136,6 +136,29 @@ def test_sell_plant_credits_cash_and_consumes_demand(
     assert demand["crassula_ovata"] == 1
 
 
+def test_protected_plant_cannot_be_sold_until_unprotected(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    with TestClient(create_app()) as client:
+        csrf = login(client)
+        protected = submit(client, csrf, "nursery.protect", {"plant_id": 1})
+        blocked = submit(client, csrf, "shop.sell_plant", {"plant_id": 1})
+        listed = client.get("/api/v1/plants").json()
+        detail = client.get("/api/v1/plants/1").json()
+        unprotected = submit(client, csrf, "nursery.unprotect", {"plant_id": 1})
+        sold = submit(client, csrf, "shop.sell_plant", {"plant_id": 1})
+
+    assert protected["status"] == "applied"
+    assert blocked["status"] == "rejected"
+    assert "protected" in (blocked["reason"] or "")
+    assert listed["nursery"]["protected_plant_ids"] == [1]
+    assert listed["plants"][0]["protected"] is True
+    assert detail["protected"] is True
+    assert unprotected["status"] == "applied"
+    assert sold["status"] == "applied"
+
+
 def test_repeated_sell_of_same_plant_is_rejected(
     monkeypatch: MonkeyPatch, tmp_path: Path
 ) -> None:

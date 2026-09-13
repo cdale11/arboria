@@ -2,6 +2,26 @@
 
 Records delivered work and actual evidence. Planned features belong in [ROADMAP.md](ROADMAP.md), not in claims of implemented behavior.
 
+## 2026-09-14 — R1 launcher gates and protected touch controls
+
+### Added
+
+- Added `ARBORIA_LAUNCHER_CHECK=1` for setup/build/fingerprint launcher checks that exit without starting Uvicorn.
+- Added launcher gate tests for invalid ports, arbitrary working directories, path-with-spaces roots, stale frontend fingerprint rebuilds, and repeat checks without unnecessary rebuilds.
+- Added persisted plant protection with `nursery.protect` and `nursery.unprotect`; protected plants are exposed in projections and rejected by sale validation until unprotected.
+- Added browser controls for protect/unprotect and responsive 44 CSS-pixel minimum touch targets at narrow widths.
+- Replaced the placeholder e2e script with a real locked Vitest/jsdom full-flow control test.
+
+### Evidence and verification
+
+- `python -m pytest tests/unit/app/test_shop_api.py tests/unit/app/test_launcher.py` passed with 15 tests.
+- `npm --prefix web run test` passed with 18 tests.
+- `npm --prefix web run test:e2e` passed with 1 test.
+
+### Limitations
+
+- Browser e2e uses locked Vitest/jsdom, not native browser binaries. No physical touch-device smoke, native browser automation, companion settings, export/import, fertilizer flow, or procedural 2.5D rendering is claimed.
+
 ## 2026-09-14 — R1 stream resync and revisioned deltas
 
 ### Added

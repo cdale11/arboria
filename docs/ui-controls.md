@@ -2,13 +2,15 @@
 
 ## 1. Scope
 
-The R1 browser app (`web/src/main.ts`) provides usable desktop controls over
+The R1 browser app (`web/src/main.ts`) provides usable controls over
 the authenticated JSON API. Every control calls a real endpoint and reports
 the receipt or error honestly in a status region; no button is decorative and
 no promised control is disabled.
 
 - Care per plant: inspect (organ kind, alive, damage detail), water 0.02 kg
-  via `nursery.water`, sell via `shop.sell_plant`.
+  via `nursery.water`, protect/unprotect via `nursery.protect` and
+  `nursery.unprotect`, and sell via `shop.sell_plant`. Protected plants are
+  rejected by server validation if sold before unprotection.
 - Shop: buy 0.5 kg reservoir water via `shop.buy_water`; buy a plant of the
   selected demanded species via `shop.buy_plant`.
 - Clock: pause, resume, and speed selection (1x, 12x, 48x, 144x) within the
@@ -20,9 +22,19 @@ no promised control is disabled.
   and the readable CSRF cookie. Missing CSRF fails fast with a reload
   hint. Rejected commands display the server reason.
 
-## 2. Deferred
+## 2. Touch layout
 
-Touch-target sizing and small-screen layout review, plant protection
-controls, procedural 2.5D rendering, fertilizer flows, companion settings,
-and export are not implemented. The game-design 44px touch target and
-360px-wide layout requirements remain open and are tracked on the roadmap.
+- `web/index.html` enforces a responsive viewport, wrapping text, and 44 CSS
+  pixel minimum heights on buttons, inputs, and selects.
+- At narrow widths, controls stack to the available width so primary care,
+  shop, clock, and save actions remain reachable without hover-dependent
+  interaction.
+- This is automated layout-contract coverage only. No physical-device smoke
+  test has been run, and no mobile performance claim is made.
+
+## 3. Deferred
+
+Procedural 2.5D rendering, fertilizer flows, companion settings, export,
+keyboard/reduced-motion audits, and physical touch-device validation are not
+implemented. Browser e2e currently uses the locked Vitest/jsdom stack rather
+than native browser binaries.
