@@ -2,6 +2,22 @@
 
 Records delivered work and actual evidence. Planned features belong in [ROADMAP.md](ROADMAP.md), not in claims of implemented behavior.
 
+## 2026-09-14 — R1 aggregate evidence synchronization
+
+### Added
+
+- Added `docs/evidence/R1.md` aggregating implemented R1 foundation coverage, current gate results, evidence files, and open release blockers.
+- Updated roadmap status for completed non-AI biology, documentation, unit/static check, and launcher gate items.
+- Corrected README backup language to distinguish implemented current-domain export/import from unimplemented learner-inclusive saves.
+
+### Evidence and verification
+
+- Documentation/status change prepared after the passing full gate run recorded in `docs/evidence/R1.md`.
+
+### Limitations
+
+- Full R1 release remains blocked by open AI/ML, physical touch-device, and performance/soak gates.
+
 ## 2026-09-14 — R1 generated nursery view and current-domain backups
 
 ### Added

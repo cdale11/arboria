@@ -68,7 +68,7 @@ Dependency: P0. This is the first playable release, not a skeleton server.
 - [x] Implement organ topology with stable IDs, acyclic parentage, cohort rules, and explicit resource pools. Evidence: `docs/evidence/R1-organ-topology.md`.
 - [x] Implement baseline causal vegetative development driven by resources rather than decorative branch generation. Evidence: `docs/evidence/R1-vegetative-growth.md`.
 - [x] Implement baseline bounded light-driven carbon assimilation for R1 coverage. Evidence: `docs/evidence/R1-carbon-assimilation.md`.
-- [ ] Implement water, N/P/K, root-zone environment, stress, damage, and death for R1 coverage.
+- [x] Implement water, N/P/K, root-zone environment, stress, damage, and death for R1 coverage. Evidence: `docs/evidence/R1-nursery-water.md` and `docs/evidence/R1-nutrient-stress.md`.
 - [x] Implement baseline root-zone water with finite reservoir watering for R1 coverage. Evidence: `docs/evidence/R1-nursery-water.md`.
 - [x] Implement N/P/K uptake, stress damage, and death for R1 coverage. Evidence: `docs/evidence/R1-nutrient-stress.md`.
 - [x] Deliver six proposed representative species in outdoor/greenhouse zones with source-backed or explicitly provisional parameter metadata and reviewed scenarios. Evidence: `docs/evidence/R1-species.md`.
@@ -91,19 +91,19 @@ Dependency: P0. This is the first playable release, not a skeleton server.
 
 #### Documentation and evidence
 
-- [ ] Update README with actual setup/run/control/backup instructions for the playable release.
-- [ ] Produce `docs/evidence/R1.md` aggregating final R1 commands, versions, platform, scenario seeds, metrics, failures, limitations, and artifact locations.
-- [ ] Keep CHANGELOG, ROADMAP, docs contracts, and MISTAKES synchronized with every delivered coherent change.
+- [x] Update README with actual setup/run/control/backup instructions for the playable release. Evidence: `README.md` and `docs/evidence/R1.md`.
+- [x] Produce `docs/evidence/R1.md` aggregating final R1 commands, versions, platform, scenario seeds, metrics, failures, limitations, and artifact locations. Evidence: `docs/evidence/R1.md`.
+- [x] Keep CHANGELOG, ROADMAP, docs contracts, and MISTAKES synchronized with every delivered coherent change. Evidence: `CHANGELOG.md` and `docs/evidence/R1.md`.
 
 ### Mandatory gates
 
-- [ ] Unit/property/scenario/API/economy tests and Python/frontend static checks pass.
+- [x] Unit/property/scenario/API/economy tests and Python/frontend static checks pass. Evidence: `docs/evidence/R1.md`.
 - [ ] [AI/ML] Atomic-save failure injection and model/optimizer/replay continuation tests pass.
-- [ ] Launcher fresh/repeat/offline/setup interruption and authentication gates pass.
+- [x] Launcher fresh/repeat/offline/setup interruption and authentication gates pass. Evidence: `docs/evidence/R1-launcher-gates.md` and `docs/evidence/R1.md`.
 - [ ] Full playable loop browser tests and recorded real touch-device smoke test pass.
 - [ ] [AI/ML] Learning holdout/ablation gates in `docs/testing.md` pass; baseline-only fallback honestly identified.
 - [ ] Target-host 500-plant performance, 1,000-plant characterization, 24-real-hour soak, and ten-sim-year stability suite completed.
-- [ ] `docs/evidence/R1.md`, updated docs/changelog, reviewed commit, verified push.
+- [ ] `docs/evidence/R1.md`, updated docs/changelog, reviewed commit, verified push. Evidence is current, but this gate remains open until full R1 blockers above are resolved.
 
 R1 scope excludes sexual reproduction, advanced bonsai craft, layered chemistry/compost ecology, learned seasonal commercial planning, and experimental rule invention. Existing starter tree/bonsai forms are live biological stock, not evidence those later mechanics work. No later-feature controls appear until their release is functional.
 
