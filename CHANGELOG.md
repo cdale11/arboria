@@ -346,3 +346,17 @@ Records delivered work and actual evidence. Planned features belong in [ROADMAP.
 ### Limitations
 
 - No implementation behavior changed.
+
+## 2026-09-13 — Visible AI/ML roadmap tags
+
+### Changed
+
+- Replaced HTML color-only roadmap markers with literal `[AI/ML]` tags so GitHub Markdown and raw file views show the AI/ML-dependent items clearly.
+
+### Evidence and verification
+
+- Documentation-only change; Markdown link/fence/whitespace checks and `git diff --check` were run.
+
+### Limitations
+
+- No implementation behavior changed.
