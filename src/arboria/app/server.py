@@ -10,8 +10,10 @@ import os
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect, status
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
@@ -23,6 +25,7 @@ from arboria.sim.clock import (
     SimulationClock,
     clock_status_payload,
 )
+from arboria.sim.companion import CompanionPolicy, CompanionState, choose_actions, validate_policy
 from arboria.sim.economy import (
     apply_buy_plant,
     apply_buy_water,
@@ -134,6 +137,7 @@ def create_app() -> FastAPI:
     nursery_uptake_kg = 0.0
     nursery_transpired_kg = 0.0
     nursery_drainage_kg = 0.0
+    companion_state = CompanionState()
     logger = logging.getLogger("arboria.app.server")
 
     def recover_nursery_state(
@@ -310,6 +314,20 @@ def create_app() -> FastAPI:
                     nursery_economy.demand_remaining.items()
                 )
             ],
+        }
+
+    def companion_payload() -> dict[str, Any]:
+        policy = companion_state.policy
+        return {
+            "schema_version": 1,
+            "enabled": policy.enabled,
+            "water_threshold": policy.water_threshold,
+            "max_actions_per_tick": policy.max_actions_per_tick,
+            "actions_proposed": companion_state.actions_proposed,
+            "actions_applied": companion_state.actions_applied,
+            "actions_rejected": companion_state.actions_rejected,
+            "last_reason": companion_state.last_reason,
+            "last_plant_id": companion_state.last_plant_id,
         }
 
     def receipt_payload(receipt: Receipt) -> dict[str, Any]:
@@ -921,6 +939,95 @@ def create_app() -> FastAPI:
         )
         receipt = service.submit(envelope, apply_command)
         return JSONResponse(receipt_payload(receipt))
+
+    @app.get("/api/v1/companion")
+    def companion_status(request: Request) -> Response:
+        if not is_authenticated(request):
+            return JSONResponse({"detail": "authentication required"}, status_code=401)
+        return JSONResponse(companion_payload())
+
+    @app.post("/api/v1/companion")
+    async def companion_settings(request: Request) -> Response:
+        nonlocal companion_state
+        rejection = require_auth_and_csrf(request)
+        if rejection is not None:
+            return rejection
+        try:
+            payload = await request.json()
+            if not isinstance(payload, dict) or set(payload) != {
+                "enabled", "water_threshold", "max_actions_per_tick"
+            }:
+                raise ValueError(
+                    "companion settings require enabled, water_threshold, "
+                    "and max_actions_per_tick"
+                )
+            if not isinstance(payload["enabled"], bool):
+                raise ValueError("companion enabled must be a boolean")
+            policy = CompanionPolicy(
+                enabled=payload["enabled"],
+                water_threshold=float(payload["water_threshold"]),
+                max_actions_per_tick=int(payload["max_actions_per_tick"]),
+            )
+            validate_policy(policy)
+        except (TypeError, ValueError) as exc:
+            return JSONResponse({"detail": str(exc)}, status_code=400)
+        companion_state = replace(companion_state, policy=policy)
+        return JSONResponse(companion_payload())
+
+    @app.post("/api/v1/companion/run")
+    def companion_run(request: Request) -> Response:
+        nonlocal companion_state
+        rejection = require_auth_and_csrf(request)
+        if rejection is not None:
+            return rejection
+        metadata = require_world_metadata()
+        plants = project_plants(
+            nursery_organs,
+            nursery_zones,
+            nursery_nutrient_zones,
+            nursery_species,
+        )
+        actions = choose_actions(
+            plants,
+            policy=companion_state.policy,
+            reservoir_kg=nursery_reservoir_kg,
+            protected_plant_ids=nursery_protected_plants,
+        )
+        service = CommandService(
+            world_id=metadata.world_id,
+            timeline_id=metadata.timeline_id,
+            request_epoch=metadata.request_epoch,
+            save_receipt=metadata_store.save_receipt,
+            find_receipt=metadata_store.find_receipt,
+        )
+        receipts: list[dict[str, Any]] = []
+        applied = 0
+        rejected = 0
+        for action in actions:
+            envelope = CommandEnvelope(
+                command_id=str(uuid4()),
+                world_id=metadata.world_id,
+                timeline_id=metadata.timeline_id,
+                request_epoch=metadata.request_epoch,
+                kind=action.kind,
+                payload=action.payload,
+            )
+            receipt = service.submit(envelope, apply_command, actor="companion")
+            receipts.append(receipt_payload(receipt))
+            if receipt.status == "applied":
+                applied += 1
+            else:
+                rejected += 1
+        last_reason = actions[0].reason if actions else "no care action required"
+        companion_state = replace(
+            companion_state,
+            actions_proposed=companion_state.actions_proposed + len(actions),
+            actions_applied=companion_state.actions_applied + applied,
+            actions_rejected=companion_state.actions_rejected + rejected,
+            last_reason=last_reason,
+            last_plant_id=actions[0].plant_id if actions else None,
+        )
+        return JSONResponse({"companion": companion_payload(), "receipts": receipts})
 
     @app.websocket("/api/v1/stream")
     async def stream(websocket: WebSocket) -> None:

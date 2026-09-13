@@ -95,6 +95,27 @@ describe("R1 playable nursery e2e flow", () => {
         archive_base64: "YXJib3JpYQ==",
       })),
       importSave: vi.fn(async () => {}),
+      companionStatus: vi.fn(async () => ({
+        enabled: false,
+        water_threshold: 0.55,
+        max_actions_per_tick: 1,
+        actions_proposed: 0,
+        actions_applied: 0,
+        actions_rejected: 0,
+        last_reason: null,
+        last_plant_id: null,
+      })),
+      setCompanion: vi.fn(async (policy) => policy),
+      runCompanion: vi.fn(async () => ({
+        enabled: false,
+        water_threshold: 0.55,
+        max_actions_per_tick: 1,
+        actions_proposed: 0,
+        actions_applied: 0,
+        actions_rejected: 0,
+        last_reason: null,
+        last_plant_id: null,
+      })),
     };
     const target = document.createElement("main");
 

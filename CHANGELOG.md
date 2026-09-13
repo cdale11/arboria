@@ -2,6 +2,24 @@
 
 Records delivered work and actual evidence. Planned features belong in [ROADMAP.md](ROADMAP.md), not in claims of implemented behavior.
 
+## 2026-09-14 — Baseline caretaker companion
+
+### Added
+
+- Added a deterministic baseline caretaker policy that prioritizes low-water
+  plants and proposes bounded `nursery.water` actions.
+- Added authenticated companion status, settings, and run endpoints. Companion
+  commands are submitted through the ordinary command service with
+  `actor="companion"`; protections and resource validators remain authoritative.
+- Added live UI controls to enable/disable the caretaker and request a care
+  check, with an explanation of the latest decision.
+
+### Limitations
+
+- This is the roadmap's baseline caretaker slice, not the neural predictor or
+  preference learner. Full authority across all available actions, persisted
+  companion policy, learner state, holdout, and ablation evidence remain open.
+
 ## 2026-09-14 — Isometric 2.5D nursery scene
 
 ### Changed
@@ -78,6 +96,22 @@ Records delivered work and actual evidence. Planned features belong in [ROADMAP.
 ### Limitations
 
 - Full R1 release remains blocked by open AI/ML, physical touch-device, and performance/soak gates.
+
+## 2026-09-14 — Baseline caretaker companion implementation
+
+### Added
+
+- Added `docs/evidence/R1-companion.md` documenting the baseline caretaker
+  slice and its explicit limits.
+- Added deterministic low-water caretaker policy, authenticated companion
+  status/settings/run endpoints, companion-owned validated watering receipts,
+  and live enable/check controls.
+- Added policy, API, and frontend regression coverage.
+
+### Limitations
+
+- The full-authority caretaker and neural prediction/preference learner roadmap
+  items remain open; this change is the first honest baseline companion slice.
 
 ## 2026-09-14 — R1 generated nursery view and current-domain backups
 

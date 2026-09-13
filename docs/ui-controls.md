@@ -13,6 +13,9 @@ no promised control is disabled.
   rejected by server validation if sold before unprotection.
 - Shop: buy 0.5 kg reservoir water via `shop.buy_water`; buy a plant of the
   selected demanded species via `shop.buy_plant`.
+- Companion: view baseline caretaker status, turn it on/off, and request a
+  bounded care check. The caretaker proposes only validated watering actions;
+  it does not sell plants or bypass protection, cash, or reservoir rules.
 - Clock: pause, resume, and speed selection (1x, 12x, 48x, 144x) within the
   server-validated 1–144 range.
 - Saves: immediate checkpoint, named save with a required non-empty name,

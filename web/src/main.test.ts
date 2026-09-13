@@ -290,6 +290,36 @@ function stubClient(overrides: Partial<NurseryClient> = {}): NurseryClient {
       archive_base64: "YXJib3JpYQ==",
     }),
     importSave: async () => {},
+    companionStatus: async () => ({
+      enabled: false,
+      water_threshold: 0.55,
+      max_actions_per_tick: 1,
+      actions_proposed: 0,
+      actions_applied: 0,
+      actions_rejected: 0,
+      last_reason: null,
+      last_plant_id: null,
+    }),
+    setCompanion: async () => ({
+      enabled: false,
+      water_threshold: 0.55,
+      max_actions_per_tick: 1,
+      actions_proposed: 0,
+      actions_applied: 0,
+      actions_rejected: 0,
+      last_reason: null,
+      last_plant_id: null,
+    }),
+    runCompanion: async () => ({
+      enabled: false,
+      water_threshold: 0.55,
+      max_actions_per_tick: 1,
+      actions_proposed: 0,
+      actions_applied: 0,
+      actions_rejected: 0,
+      last_reason: null,
+      last_plant_id: null,
+    }),
     ...overrides,
   };
 }
@@ -389,10 +419,41 @@ describe("nursery controls", () => {
       "restore",
       "export",
       "import",
+      "companion-toggle",
+      "companion-run",
       "refresh",
     ]) {
       expect(target.querySelector(`[data-action="${action}"]`)).not.toBeNull();
     }
+  });
+
+  it("runs the baseline caretaker through companion controls", async () => {
+    const runCompanion = vi.fn(async () => ({
+      enabled: true,
+      water_threshold: 0.55,
+      max_actions_per_tick: 1,
+      actions_proposed: 1,
+      actions_applied: 1,
+      actions_rejected: 0,
+      last_reason: "water plant 1",
+      last_plant_id: 1,
+    }));
+    const { target } = await mountedClient({
+      runCompanion,
+      companionStatus: async () => ({
+        enabled: true,
+        water_threshold: 0.55,
+        max_actions_per_tick: 1,
+        actions_proposed: 0,
+        actions_applied: 0,
+        actions_rejected: 0,
+        last_reason: null,
+        last_plant_id: null,
+      }),
+    });
+
+    clickAction(target, "companion-run");
+    await vi.waitFor(() => expect(runCompanion).toHaveBeenCalled());
   });
 
   it("waters a plant and reports the receipt", async () => {

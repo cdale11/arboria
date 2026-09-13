@@ -452,6 +452,17 @@ export interface ExportPayload {
   archive_base64: string;
 }
 
+export interface CompanionStatus {
+  enabled: boolean;
+  water_threshold: number;
+  max_actions_per_tick: number;
+  actions_proposed: number;
+  actions_applied: number;
+  actions_rejected: number;
+  last_reason: string | null;
+  last_plant_id: number | null;
+}
+
 export interface NurseryClient {
   load(): Promise<NurseryApi>;
   inspect(plantId: number): Promise<PlantDetail>;
@@ -465,6 +476,9 @@ export interface NurseryClient {
   restore(name: string): Promise<void>;
   exportSave(): Promise<ExportPayload>;
   importSave(archiveBase64: string): Promise<void>;
+  companionStatus(): Promise<CompanionStatus>;
+  setCompanion(policy: CompanionStatus): Promise<CompanionStatus>;
+  runCompanion(): Promise<CompanionStatus>;
 }
 
 export function readCsrfToken(cookieString: string): string | null {
@@ -621,6 +635,33 @@ export function createApiClient(
     };
   }
 
+  function parseCompanion(payload: unknown): CompanionStatus {
+    if (!isRecord(payload)) {
+      throw new Error("unexpected companion response shape");
+    }
+    const numericKeys = [
+      "water_threshold", "max_actions_per_tick", "actions_proposed",
+      "actions_applied", "actions_rejected",
+    ];
+    if (
+      typeof payload["enabled"] !== "boolean" ||
+      numericKeys.some((key) => toNumber(payload[key]) === null)
+    ) {
+      throw new Error("unexpected companion response shape");
+    }
+    const lastPlant = payload["last_plant_id"];
+    return {
+      enabled: payload["enabled"] as boolean,
+      water_threshold: payload["water_threshold"] as number,
+      max_actions_per_tick: payload["max_actions_per_tick"] as number,
+      actions_proposed: payload["actions_proposed"] as number,
+      actions_applied: payload["actions_applied"] as number,
+      actions_rejected: payload["actions_rejected"] as number,
+      last_reason: typeof payload["last_reason"] === "string" ? payload["last_reason"] as string : null,
+      last_plant_id: typeof lastPlant === "number" ? lastPlant : null,
+    };
+  }
+
   return {
     async load(): Promise<NurseryApi> {
       const [worldJson, plantsJson] = await Promise.all([
@@ -705,6 +746,27 @@ export function createApiClient(
         csrfHeaders(),
       );
     },
+    async companionStatus(): Promise<CompanionStatus> {
+      return parseCompanion(await getJson("/api/v1/companion"));
+    },
+    async setCompanion(policy: CompanionStatus): Promise<CompanionStatus> {
+      return parseCompanion(await postJson(
+        "/api/v1/companion",
+        {
+          enabled: policy.enabled,
+          water_threshold: policy.water_threshold,
+          max_actions_per_tick: policy.max_actions_per_tick,
+        },
+        csrfHeaders(),
+      ));
+    },
+    async runCompanion(): Promise<CompanionStatus> {
+      const payload = await postJson("/api/v1/companion/run", {}, csrfHeaders());
+      if (!isRecord(payload)) {
+        throw new Error("unexpected companion response shape");
+      }
+      return parseCompanion(payload["companion"]);
+    },
   };
 }
 
@@ -724,6 +786,8 @@ export interface ControlCallbacks {
   onRestore(name: string): void;
   onExport(): void;
   onImport(archiveBase64: string): void;
+  onCompanionToggle(): void;
+  onCompanionRun(): void;
   onRefresh(): void;
 }
 
@@ -734,6 +798,7 @@ export interface ControlContext {
   detail: PlantDetail | null;
   result: string | null;
   exportArchive: string;
+  companion: CompanionStatus;
 }
 
 function actionButton(
@@ -916,6 +981,30 @@ export function renderControlPanel(
   );
   panel.append(saves);
 
+  const companion = document.createElement("section");
+  companion.className = "control-section companion-section";
+  const companionHeading = document.createElement("h2");
+  companionHeading.textContent = "Caretaker companion";
+  const companionStatus = document.createElement("p");
+  companionStatus.textContent = context.companion.enabled
+    ? `On · ${context.companion.actions_applied} care actions applied`
+    : "Off · baseline caretaker will only water plants below its threshold";
+  const companionToggle = actionButton(
+    context.companion.enabled ? "Turn off" : "Turn on",
+    "companion-toggle",
+    () => callbacks.onCompanionToggle(),
+  );
+  const companionRun = actionButton("Check plants now", "companion-run", () =>
+    callbacks.onCompanionRun(),
+  );
+  companion.append(companionHeading, companionStatus, companionToggle, document.createTextNode(" "), companionRun);
+  if (context.companion.last_reason !== null) {
+    const reason = document.createElement("p");
+    reason.textContent = context.companion.last_reason;
+    companion.append(reason);
+  }
+  panel.append(companion);
+
   const tools = document.createElement("p");
   tools.append(actionButton("Refresh", "refresh", () => callbacks.onRefresh()));
   const result = document.createElement("p");
@@ -951,7 +1040,11 @@ export async function mountNurseryApp(
 
   async function refresh(): Promise<void> {
     try {
-      const [api, saves] = await Promise.all([client.load(), client.listSaves()]);
+      const [api, saves, companion] = await Promise.all([
+        client.load(),
+        client.listSaves(),
+        client.companionStatus(),
+      ]);
       const lines =
         formatNurseryStatus(api.world);
       status.textContent = lines;
@@ -992,6 +1085,8 @@ export async function mountNurseryApp(
         },
         onExport: () => void exportSave(),
         onImport: (archiveBase64) => void importSave(archiveBase64),
+        onCompanionToggle: () => void toggleCompanion(companion),
+        onCompanionRun: () => void runCompanion(),
         onRefresh: () => {
           result = null;
           void refresh();
@@ -1004,6 +1099,7 @@ export async function mountNurseryApp(
         detail,
         result,
         exportArchive,
+        companion,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "unknown error";
@@ -1079,6 +1175,26 @@ export async function mountNurseryApp(
       result = "Imported archive.";
       exportArchive = archiveBase64.trim();
       detail = null;
+    } catch (error) {
+      result = error instanceof Error ? error.message : "unknown error";
+    }
+    await refresh();
+  }
+
+  async function toggleCompanion(current: CompanionStatus): Promise<void> {
+    try {
+      await client.setCompanion({ ...current, enabled: !current.enabled });
+      result = `Companion ${current.enabled ? "off" : "on"}.`;
+    } catch (error) {
+      result = error instanceof Error ? error.message : "unknown error";
+    }
+    await refresh();
+  }
+
+  async function runCompanion(): Promise<void> {
+    try {
+      const companion = await client.runCompanion();
+      result = companion.last_reason ?? "Companion checked the nursery.";
     } catch (error) {
       result = error instanceof Error ? error.message : "unknown error";
     }

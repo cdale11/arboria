@@ -85,7 +85,7 @@ Dependency: P0. This is the first playable release, not a skeleton server.
 
 #### Companion and learning
 
-- [ ] [AI/ML] Implement competent full-authority caretaker for available actions, constrained by hard player protections.
+- [ ] [AI/ML] Implement competent full-authority caretaker for available actions, constrained by hard player protections. Partial baseline evidence: `docs/evidence/R1-companion.md` covers validated watering only; full authority and learned management remain open.
 - [ ] [AI/ML] Implement real online neural prediction and preference learning with persisted model, optimizer, normalization, replay, RNG, and evaluation state.
 - [ ] [AI/ML] Demonstrate R1 learning holdout and ablation evidence, including baseline-only fallback honesty.
 

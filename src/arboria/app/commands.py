@@ -146,7 +146,13 @@ class CommandService:
         self._save_receipt = save_receipt
         self._find_receipt = find_receipt
 
-    def submit(self, envelope: CommandEnvelope, handler: CommandHandler) -> Receipt:
+    def submit(
+        self,
+        envelope: CommandEnvelope,
+        handler: CommandHandler,
+        *,
+        actor: str = "player",
+    ) -> Receipt:
         existing = self._find_receipt(
             self._timeline_id,
             self._epoch,
@@ -155,14 +161,14 @@ class CommandService:
         if existing is not None:
             return existing
         if envelope.world_id != self._world_id or envelope.timeline_id != self._timeline_id:
-            return self._record(envelope, "rejected", "world or timeline mismatch", None)
+            return self._record(envelope, "rejected", "world or timeline mismatch", None, actor)
         if envelope.request_epoch != self._epoch:
-            return self._record(envelope, "rejected", "request epoch expired", None)
+            return self._record(envelope, "rejected", "request epoch expired", None, actor)
         try:
             result = handler(envelope)
         except CommandValidationError as exc:
-            return self._record(envelope, "rejected", str(exc), None)
-        return self._record(envelope, "applied", None, result)
+            return self._record(envelope, "rejected", str(exc), None, actor)
+        return self._record(envelope, "applied", None, result, actor)
 
     def _record(
         self,
@@ -170,10 +176,11 @@ class CommandService:
         receipt_status: str,
         reason: str | None,
         result: dict[str, Any] | None,
+        actor: str,
     ) -> Receipt:
         receipt = Receipt(
             command_id=envelope.command_id,
-            actor="player",
+            actor=actor,
             kind=envelope.kind,
             status=receipt_status,
             reason=reason,

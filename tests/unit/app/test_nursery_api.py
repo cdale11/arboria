@@ -56,6 +56,32 @@ def test_plants_list_reports_starter_nursery(
     assert payload["plants"][0]["zone_nitrogen_kg"] > 0.0
 
 
+def test_baseline_companion_runs_validated_care_action(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    with TestClient(create_app()) as client:
+        csrf = login(client)
+        configured = client.post(
+            "/api/v1/companion",
+            json={"enabled": True, "water_threshold": 1.0, "max_actions_per_tick": 1},
+            headers={CSRF_HEADER_NAME: csrf},
+        )
+        ran = client.post(
+            "/api/v1/companion/run",
+            json={},
+            headers={CSRF_HEADER_NAME: csrf},
+        )
+
+    assert configured.status_code == 200
+    assert configured.json()["enabled"] is True
+    assert ran.status_code == 200
+    assert ran.json()["companion"]["actions_proposed"] == 1
+    assert ran.json()["companion"]["actions_applied"] == 1
+    assert ran.json()["receipts"][0]["actor"] == "companion"
+    assert ran.json()["receipts"][0]["kind"] == "nursery.water"
+
+
 def test_plant_detail_requires_existing_plant(
     monkeypatch: MonkeyPatch, tmp_path: Path
 ) -> None:
