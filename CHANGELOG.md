@@ -331,3 +331,18 @@ Records delivered work and actual evidence. Planned features belong in [ROADMAP.
 ### Limitations
 
 - Named-saves baseline only: saves point to metadata-only checkpoints; restore, export/import, autosave, retention, corruption recovery, biology/economy/learner checkpoint contents, and save UI remain unimplemented.
+
+## 2026-09-13 — AI/ML roadmap highlighting
+
+### Changed
+
+- Marked roadmap checklist items requiring AI, ML, neural-network, companion, or manager-learning systems in blue.
+- Added a roadmap legend explaining the blue highlight.
+
+### Evidence and verification
+
+- Documentation-only change; Markdown link/fence/whitespace checks and `git diff --check` were run.
+
+### Limitations
+
+- No implementation behavior changed.

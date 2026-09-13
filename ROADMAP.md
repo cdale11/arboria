@@ -4,6 +4,8 @@ Status is evidence-based. `[x]` means the stated deliverable is complete; `[ ]` 
 
 A coherent commit may finish an internal component; it does not finish a release. Each player-facing release must be independently runnable, documented, recoverable, and fully functional within its declared coverage. Do not expose unfinished controls, claim a partial release is complete, or substitute a prototype for its gates.
 
+Items shown in <span style="color:#0969da">blue</span> require AI, ML, neural-network, companion, or manager-learning systems to be wired.
+
 ## P0 — Planning baseline
 
 Dependencies: user clarification and host inspection.
@@ -51,7 +53,7 @@ Dependency: P0. This is the first playable release, not a skeleton server.
 - [x] Implement SQLite metadata store. Evidence: `docs/evidence/R1-world-metadata.md`.
 - [x] Implement immutable checkpoint generation layout. Evidence: `docs/evidence/R1-checkpoint-layout.md`.
 - [x] Implement metadata-only named save creation and listing. Evidence: `docs/evidence/R1-named-saves.md`.
-- [ ] Implement autosave, restore, export/import, and consistent world+learner checkpoint protocol.
+- [ ] <span style="color:#0969da">Implement autosave, restore, export/import, and consistent world+learner checkpoint protocol.</span>
 - [ ] Implement crash/disk-failure recovery and migration protocol.
 - [ ] Add atomic-save failure-injection tests.
 
@@ -72,9 +74,9 @@ Dependency: P0. This is the first playable release, not a skeleton server.
 
 #### Companion and learning
 
-- [ ] Implement competent full-authority caretaker for available actions, constrained by hard player protections.
-- [ ] Implement real online neural prediction and preference learning with persisted model, optimizer, normalization, replay, RNG, and evaluation state.
-- [ ] Demonstrate R1 learning holdout and ablation evidence, including baseline-only fallback honesty.
+- [ ] <span style="color:#0969da">Implement competent full-authority caretaker for available actions, constrained by hard player protections.</span>
+- [ ] <span style="color:#0969da">Implement real online neural prediction and preference learning with persisted model, optimizer, normalization, replay, RNG, and evaluation state.</span>
+- [ ] <span style="color:#0969da">Demonstrate R1 learning holdout and ablation evidence, including baseline-only fallback honesty.</span>
 
 #### Documentation and evidence
 
@@ -85,10 +87,10 @@ Dependency: P0. This is the first playable release, not a skeleton server.
 ### Mandatory gates
 
 - [ ] Unit/property/scenario/API/economy tests and Python/frontend static checks pass.
-- [ ] Atomic-save failure injection and model/optimizer/replay continuation tests pass.
+- [ ] <span style="color:#0969da">Atomic-save failure injection and model/optimizer/replay continuation tests pass.</span>
 - [ ] Launcher fresh/repeat/offline/setup interruption and authentication gates pass.
 - [ ] Full playable loop browser tests and recorded real touch-device smoke test pass.
-- [ ] Learning holdout/ablation gates in `docs/testing.md` pass; baseline-only fallback honestly identified.
+- [ ] <span style="color:#0969da">Learning holdout/ablation gates in `docs/testing.md` pass; baseline-only fallback honestly identified.</span>
 - [ ] Target-host 500-plant performance, 1,000-plant characterization, 24-real-hour soak, and ten-sim-year stability suite completed.
 - [ ] `docs/evidence/R1.md`, updated docs/changelog, reviewed commit, verified push.
 
@@ -122,7 +124,7 @@ Dependency: R1.
 - [ ] Add harvest/product inventory backed by produced biological material.
 - [ ] Add sales for seeds, fruit, cuttings, and other R2 products through finite transactions.
 - [ ] Add working breeding, pollination, seed-lot, lineage, propagation, harvest, and product UI flows.
-- [ ] Extend companion authority to supported propagation, pollination, seed management, and harvest actions.
+- [ ] <span style="color:#0969da">Extend companion authority to supported propagation, pollination, seed management, and harvest actions.</span>
 - [ ] Display scientific coverage, compatibility, provenance, and unsupported reproductive behavior per species.
 
 ### R2 gates and evidence
@@ -153,7 +155,7 @@ Dependency: R2.
 - [ ] Add precise mouse/touch branch/root selection and preview controls.
 - [ ] Add consequence previews for pruning, root work, wiring, defoliation, repotting, and grafting.
 - [ ] Add explicit protections for plants, structures, and destructive action classes.
-- [ ] Extend companion policies for structural interventions, including conservative defaults and protected exceptions.
+- [ ] <span style="color:#0969da">Extend companion policies for structural interventions, including conservative defaults and protected exceptions.</span>
 - [ ] Account for removed material as cuttings, products, compost input, or waste without creating biomass.
 - [ ] Preserve lineage and graft provenance through structural changes.
 
@@ -190,7 +192,7 @@ Dependency: R3.
 
 - [ ] Add working compost, fertilizer, treatment, substrate-mixing, leachate, and soil-inspection UI flows.
 - [ ] Add inventory transformations for composting, mixing, applying, discarding, and harvesting amendments.
-- [ ] Extend companion routines for compost maintenance, fertilizer scheduling, treatment, and outbreak response.
+- [ ] <span style="color:#0969da">Extend companion routines for compost maintenance, fertilizer scheduling, treatment, and outbreak response.</span>
 - [ ] Add state migration for substrate layers, ecology, pests/pathogens, and treatment histories.
 
 ### R4 gates and evidence
@@ -208,27 +210,27 @@ Dependency: R4.
 
 ### Commercial learning and planning
 
-- [ ] Implement learned demand forecasting with customer cohorts, budgets, preferences, seasonality, and uncertainty.
+- [ ] <span style="color:#0969da">Implement learned demand forecasting with customer cohorts, budgets, preferences, seasonality, and uncertainty.</span>
 - [ ] Implement bounded price exploration and quote expiry without synthetic random profit.
 - [ ] Implement seasonal production, propagation, harvest, and inventory scheduling.
 - [ ] Implement stock forecasting with storage, viability, spoilage, quality, and space constraints.
-- [ ] Implement higher-level manager planning over care, production, purchases, sales, and labor-saving decisions.
+- [ ] <span style="color:#0969da">Implement higher-level manager planning over care, production, purchases, sales, and labor-saving decisions.</span>
 - [ ] Account for operating inputs, supplier limits, product quality, and real transaction constraints.
 
 ### Manager controls and explanations
 
-- [ ] Expose learned preferences, planning horizon, uncertainty, objectives, and policy overrides.
-- [ ] Add away reports covering plant changes, earnings, interventions, losses, risks, and learning updates.
-- [ ] Enforce player protections and cash/material constraints as hard constraints under all commercial planning.
-- [ ] Provide reset/freeze/baseline comparison controls for learned commercial behavior.
+- [ ] <span style="color:#0969da">Expose learned preferences, planning horizon, uncertainty, objectives, and policy overrides.</span>
+- [ ] <span style="color:#0969da">Add away reports covering plant changes, earnings, interventions, losses, risks, and learning updates.</span>
+- [ ] <span style="color:#0969da">Enforce player protections and cash/material constraints as hard constraints under all commercial planning.</span>
+- [ ] <span style="color:#0969da">Provide reset/freeze/baseline comparison controls for learned commercial behavior.</span>
 
 ### R5 gates and evidence
 
-- [ ] Demonstrate multi-season autonomous operation with real transactions and no protection violations.
-- [ ] Compare learned manager against frozen/baseline managers over multiple fixed seeds.
-- [ ] Evaluate profit, mortality, inventory diversity, resource use, labor reduction, and uncertainty together.
-- [ ] Run anti-arbitrage, adversarial-policy, catastrophic-forgetting, migration, UI, performance, and soak tests.
-- [ ] Document failure cases and trade-offs rather than optimizing one headline metric.
+- [ ] <span style="color:#0969da">Demonstrate multi-season autonomous operation with real transactions and no protection violations.</span>
+- [ ] <span style="color:#0969da">Compare learned manager against frozen/baseline managers over multiple fixed seeds.</span>
+- [ ] <span style="color:#0969da">Evaluate profit, mortality, inventory diversity, resource use, labor reduction, and uncertainty together.</span>
+- [ ] <span style="color:#0969da">Run anti-arbitrage, adversarial-policy, catastrophic-forgetting, migration, UI, performance, and soak tests.</span>
+- [ ] <span style="color:#0969da">Document failure cases and trade-offs rather than optimizing one headline metric.</span>
 - [ ] Publish `docs/evidence/R5.md`, update docs/changelog/roadmap, commit, push, and verify remote equality.
 
 ## R6 — Broad calibrated collection and scale
@@ -246,14 +248,14 @@ Dependency: R5. Species packages can be developed as complete internal changes e
 ### Scale and rendering
 
 - [ ] Meet 1,000-plant target-host tick/RAM gates with heterogeneous mature plants and overlapping canopies.
-- [ ] Include active learning, commerce, saves, manager behavior, and active client projections during scale tests.
+- [ ] <span style="color:#0969da">Include active learning, commerce, saves, manager behavior, and active client projections during scale tests.</span>
 - [ ] Demonstrate mobile visual scaling without changing server biology.
 - [ ] Quantify browser FPS/memory on named desktop and mobile devices/settings.
 
 ### Optimization evidence
 
 - [ ] Benchmark CPU vectorization, cohort algorithms, memory layouts, and thread settings.
-- [ ] Benchmark optional iGPU learning/render-adjacent workloads only if dependency and memory constraints allow.
+- [ ] <span style="color:#0969da">Benchmark optional iGPU learning/render-adjacent workloads only if dependency and memory constraints allow.</span>
 - [ ] Adopt GPU use only with end-to-end evidence; otherwise document why CPU remains preferred.
 - [ ] Keep optimized paths equivalent to reference kernels within documented tolerances.
 
@@ -270,31 +272,31 @@ Dependency: R6; research gate, not guaranteed completion by a deadline.
 
 ### Research feasibility and policy
 
-- [ ] Resolve local proposal-generation feasibility and resource budget on the target machine.
-- [ ] Ask the user before adopting remote AI, ongoing external cost, new package-manager exceptions, or changed deployment requirements.
+- [ ] <span style="color:#0969da">Resolve local proposal-generation feasibility and resource budget on the target machine.</span>
+- [ ] <span style="color:#0969da">Ask the user before adopting remote AI, ongoing external cost, new package-manager exceptions, or changed deployment requirements.</span>
 - [ ] Define opt-in world settings, risk warnings, rollback expectations, and unsupported guarantees.
-- [ ] Decide whether the generator is neural, evolutionary, search-based, symbolic, or hybrid using measured evidence.
+- [ ] <span style="color:#0969da">Decide whether the generator is neural, evolutionary, search-based, symbolic, or hybrid using measured evidence.</span>
 
 ### Proposal language and validator
 
 - [ ] Implement a restricted typed, unit-aware proposal language for recipes, bounded interactions, and item definitions.
 - [ ] Implement a bounded interpreter with no generated executable Python/JavaScript, imports, file/network access, or unbounded loops.
 - [ ] Validate dimensions, resources, compatibility, dependencies, conservation, cost, and evaluation bounds.
-- [ ] Persist proposal provenance, generator checkpoint, parent rule-set hash, validation results, and rejection reasons.
+- [ ] <span style="color:#0969da">Persist proposal provenance, generator checkpoint, parent rule-set hash, validation results, and rejection reasons.</span>
 
 ### Isolated evaluation and activation
 
 - [ ] Run proposals in isolated test worlds with fixed CPU/memory/tick budgets.
 - [ ] Evaluate adversarial, conservation, stability, economy-exploit, and multi-season scenarios before activation.
-- [ ] Score novelty and usefulness separately from validity.
+- [ ] <span style="color:#0969da">Score novelty and usefulness separately from validity.</span>
 - [ ] Activate accepted rule sets only at checkpoint boundaries in opted-in worlds.
 - [ ] Implement complete-world rollback to preactivation snapshots for failed active rules.
 
 ### R7 gates and evidence
 
-- [ ] Demonstrate an accepted new interaction/item transformation not individually scripted as a gameplay event.
-- [ ] Demonstrate rejected invalid proposals with reproducible reasons.
-- [ ] Show sustained bounded resource use and no validator bypass under adversarial generated proposals.
+- [ ] <span style="color:#0969da">Demonstrate an accepted new interaction/item transformation not individually scripted as a gameplay event.</span>
+- [ ] <span style="color:#0969da">Demonstrate rejected invalid proposals with reproducible reasons.</span>
+- [ ] <span style="color:#0969da">Show sustained bounded resource use and no validator bypass under adversarial generated proposals.</span>
 - [ ] Deliver opt-in laboratory UI, transparent limits, save compatibility, integration, soak, and performance evidence.
 - [ ] Publish `docs/evidence/R7.md`, update docs/changelog/roadmap, commit, push, and verify remote equality.
 
