@@ -93,6 +93,34 @@ def test_metadata_store_registers_active_checkpoint(tmp_path: Path) -> None:
     assert loaded.active_checkpoint_id == "checkpoint-a"
 
 
+def test_metadata_store_names_and_lists_snapshots(tmp_path: Path) -> None:
+    store = MetadataStore(tmp_path)
+    store.initialize_for_process_start()
+    store.register_checkpoint(
+        checkpoint_id="checkpoint-a",
+        parent_checkpoint_id=None,
+        sim_tick=1,
+        world_revision=1,
+        created_unix_s=123,
+        manifest_hash="abc123",
+        status="complete",
+    )
+
+    store.name_snapshot(
+        name="Morning save",
+        checkpoint_id="checkpoint-a",
+        created_unix_s=123,
+        protected=True,
+    )
+
+    snapshots = store.list_snapshots()
+
+    assert len(snapshots) == 1
+    assert snapshots[0].name == "Morning save"
+    assert snapshots[0].checkpoint_id == "checkpoint-a"
+    assert snapshots[0].protected is True
+
+
 def test_metadata_store_enables_durable_sqlite_settings(tmp_path: Path) -> None:
     store = MetadataStore(tmp_path)
     store.initialize_for_process_start()

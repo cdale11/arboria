@@ -50,7 +50,8 @@ Dependency: P0. This is the first playable release, not a skeleton server.
 
 - [x] Implement SQLite metadata store. Evidence: `docs/evidence/R1-world-metadata.md`.
 - [x] Implement immutable checkpoint generation layout. Evidence: `docs/evidence/R1-checkpoint-layout.md`.
-- [ ] Implement autosave, named saves, restore, export/import, and consistent world+learner checkpoint protocol.
+- [x] Implement metadata-only named save creation and listing. Evidence: `docs/evidence/R1-named-saves.md`.
+- [ ] Implement autosave, restore, export/import, and consistent world+learner checkpoint protocol.
 - [ ] Implement crash/disk-failure recovery and migration protocol.
 - [ ] Add atomic-save failure-injection tests.
 

@@ -41,6 +41,7 @@ from .process_lock import DataDirectoryLock
 MAX_FAILED_LOGINS = 5
 LOGIN_WINDOW_SECONDS = 15 * 60
 MAX_STREAM_MESSAGE_BYTES = 4096
+MAX_SAVE_NAME_LENGTH = 80
 
 
 def _repo_root() -> Path:
@@ -204,6 +205,25 @@ def create_app() -> FastAPI:
             "manifest": manifest,
         }
 
+    def snapshot_payloads() -> list[dict[str, Any]]:
+        return [
+            {
+                "name": snapshot.name,
+                "checkpoint_id": snapshot.checkpoint_id,
+                "created_unix_s": snapshot.created_unix_s,
+                "protected": snapshot.protected,
+            }
+            for snapshot in metadata_store.list_snapshots()
+        ]
+
+    def validate_save_name(value: Any) -> str:
+        if not isinstance(value, str):
+            raise ValueError("save name must be a string")
+        name = value.strip()
+        if not name or len(name) > MAX_SAVE_NAME_LENGTH or "/" in name or "\\" in name:
+            raise ValueError("save name must be 1-80 characters without path separators")
+        return name
+
     @app.middleware("http")
     async def reject_cross_origin_mutations(
         request: Request, call_next: Callable[[Request], Awaitable[Response]]
@@ -326,6 +346,39 @@ def create_app() -> FastAPI:
         if rejection is not None:
             return rejection
         return JSONResponse(create_checkpoint_payload())
+
+    @app.get("/api/v1/saves")
+    def list_saves(request: Request) -> Response:
+        if not is_authenticated(request):
+            return JSONResponse({"detail": "authentication required"}, status_code=401)
+        return JSONResponse({"snapshots": snapshot_payloads()})
+
+    @app.post("/api/v1/saves/named")
+    async def create_named_save(request: Request) -> Response:
+        rejection = require_auth_and_csrf(request)
+        if rejection is not None:
+            return rejection
+        payload = await request.json()
+        if not isinstance(payload, dict):
+            return JSONResponse({"detail": "invalid payload"}, status_code=400)
+        try:
+            name = validate_save_name(payload.get("name"))
+        except ValueError as exc:
+            return JSONResponse({"detail": str(exc)}, status_code=400)
+        checkpoint = create_checkpoint_payload()
+        metadata_store.name_snapshot(
+            name=name,
+            checkpoint_id=str(checkpoint["checkpoint_id"]),
+            created_unix_s=int(checkpoint["created_unix_s"]),
+            protected=True,
+        )
+        snapshot = {
+            "name": name,
+            "checkpoint_id": checkpoint["checkpoint_id"],
+            "created_unix_s": checkpoint["created_unix_s"],
+            "protected": True,
+        }
+        return JSONResponse({"snapshot": snapshot, "checkpoint": checkpoint})
 
     @app.post("/api/v1/commands")
     async def submit_command(request: Request) -> Response:

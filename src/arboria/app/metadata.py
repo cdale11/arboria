@@ -29,6 +29,14 @@ class WorldMetadata:
     loop: WorldLoopState
 
 
+@dataclass(frozen=True)
+class SnapshotName:
+    name: str
+    checkpoint_id: str
+    created_unix_s: int
+    protected: bool
+
+
 class MetadataStore:
     """Own the small durable metadata database before full checkpoints exist."""
 
@@ -187,6 +195,37 @@ class MetadataStore:
             )
             connection.commit()
 
+    def name_snapshot(
+        self, *, name: str, checkpoint_id: str, created_unix_s: int, protected: bool
+    ) -> None:
+        with self._connect() as connection:
+            self._create_schema(connection)
+            connection.execute(
+                "INSERT INTO snapshot_names (name, checkpoint_id, created_unix_s, protected) "
+                "VALUES (?, ?, ?, ?) "
+                "ON CONFLICT(name) DO UPDATE SET checkpoint_id = excluded.checkpoint_id, "
+                "created_unix_s = excluded.created_unix_s, protected = excluded.protected",
+                (name, checkpoint_id, created_unix_s, int(protected)),
+            )
+            connection.commit()
+
+    def list_snapshots(self) -> list[SnapshotName]:
+        with self._connect() as connection:
+            self._create_schema(connection)
+            rows = connection.execute(
+                "SELECT name, checkpoint_id, created_unix_s, protected FROM snapshot_names "
+                "ORDER BY created_unix_s DESC, name ASC"
+            ).fetchall()
+            return [
+                SnapshotName(
+                    name=str(row["name"]),
+                    checkpoint_id=str(row["checkpoint_id"]),
+                    created_unix_s=int(row["created_unix_s"]),
+                    protected=bool(row["protected"]),
+                )
+                for row in rows
+            ]
+
     def find_receipt(
         self, timeline_id: str, request_epoch: int, command_id: str
     ) -> Receipt | None:
@@ -314,5 +353,13 @@ class MetadataStore:
             "created_unix_s INTEGER NOT NULL, "
             "manifest_hash TEXT NOT NULL, "
             "status TEXT NOT NULL CHECK (status IN ('complete'))"
+            ")"
+        )
+        connection.execute(
+            "CREATE TABLE IF NOT EXISTS snapshot_names ("
+            "name TEXT PRIMARY KEY, "
+            "checkpoint_id TEXT NOT NULL REFERENCES checkpoints(checkpoint_id), "
+            "created_unix_s INTEGER NOT NULL, "
+            "protected INTEGER NOT NULL CHECK (protected IN (0, 1))"
             ")"
         )

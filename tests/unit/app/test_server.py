@@ -279,6 +279,59 @@ def test_manual_checkpoint_creates_manifest_and_updates_world(
     assert world["active_checkpoint_id"] == checkpoint_id
 
 
+def test_save_listing_requires_authentication(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    with TestClient(create_app()) as client:
+        response = client.get("/api/v1/saves")
+
+    assert response.status_code == 401
+
+
+def test_named_save_requires_csrf(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    with TestClient(create_app()) as client:
+        login(client)
+        response = client.post("/api/v1/saves/named", json={"name": "Morning"})
+
+    assert response.status_code == 403
+
+
+def test_named_save_creates_checkpoint_and_list_entry(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    with TestClient(create_app()) as client:
+        csrf = login(client)
+        created = client.post(
+            "/api/v1/saves/named",
+            json={"name": "Morning"},
+            headers={CSRF_HEADER_NAME: csrf},
+        )
+        listed = client.get("/api/v1/saves")
+
+    assert created.status_code == 200
+    snapshot = created.json()["snapshot"]
+    assert snapshot["name"] == "Morning"
+    assert snapshot["protected"] is True
+    assert (tmp_path / "checkpoints" / snapshot["checkpoint_id"] / "manifest.json").is_file()
+    assert listed.json()["snapshots"] == [snapshot]
+
+
+def test_named_save_rejects_path_like_names(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    with TestClient(create_app()) as client:
+        csrf = login(client)
+        response = client.post(
+            "/api/v1/saves/named",
+            json={"name": "../bad"},
+            headers={CSRF_HEADER_NAME: csrf},
+        )
+
+    assert response.status_code == 400
+
+
 def command(world: dict[str, object], kind: str, payload: dict[str, object]) -> dict[str, object]:
     return {
         "schema_version": 1,

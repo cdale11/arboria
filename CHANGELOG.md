@@ -310,3 +310,24 @@ Records delivered work and actual evidence. Planned features belong in [ROADMAP.
 ### Limitations
 
 - Checkpoint-layout baseline only: no biology, economy, learner state, pending queues, autosave, named saves, restore, export/import, retention, corruption recovery, or failure-injection tests exist yet.
+
+## 2026-09-13 — R1 named-saves baseline
+
+### Added
+
+- Added SQLite `snapshot_names` records for metadata-only named saves.
+- Added authenticated `/api/v1/saves` listing endpoint.
+- Added CSRF-protected `/api/v1/saves/named` endpoint that creates a metadata-only checkpoint and assigns a protected name.
+- Added bounded save-name validation rejecting empty, overly long, and path-like names.
+- Added metadata/server tests for named snapshot persistence, authentication, CSRF, checkpoint creation, listing, and name validation.
+- Updated README, roadmap, persistence notes, and evidence documentation.
+
+### Evidence and verification
+
+- `python -m pytest tests/unit/app/test_metadata.py tests/unit/app/test_server.py` passed with 34 tests and the documented FastAPI/Starlette `TestClient` deprecation warning.
+- `ruff check src/arboria/app/metadata.py src/arboria/app/server.py tests/unit/app/test_metadata.py tests/unit/app/test_server.py` passed.
+- `mypy src tests/unit` passed.
+
+### Limitations
+
+- Named-saves baseline only: saves point to metadata-only checkpoints; restore, export/import, autosave, retention, corruption recovery, biology/economy/learner checkpoint contents, and save UI remain unimplemented.
