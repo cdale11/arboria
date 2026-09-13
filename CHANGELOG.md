@@ -269,3 +269,23 @@ Records delivered work and actual evidence. Planned features belong in [ROADMAP.
 ### Limitations
 
 - Stream baseline only: no biological projections, revisioned deltas, reconnect replay, resync recovery, frontend stream consumption, or outbound subscriber queues exist yet.
+
+## 2026-09-13 — R1 world-loop baseline
+
+### Added
+
+- Added `WorldLoop`, a single in-process accumulator that consumes clock state into fixed 300-sim-second ticks and world revisions.
+- Persisted `sim_tick`, `world_revision`, and consumed simulation time in SQLite metadata.
+- Exposed tick/revision fields through `/api/v1/world` and stream snapshots.
+- Added deterministic loop tests and metadata/server coverage for persisted tick state and API exposure.
+- Updated README, roadmap, architecture notes, persistence notes, and evidence documentation.
+
+### Evidence and verification
+
+- `python -m pytest tests/unit/sim/test_world_loop.py tests/unit/app/test_metadata.py tests/unit/app/test_server.py` passed with 28 tests and the documented FastAPI/Starlette `TestClient` deprecation warning.
+- `ruff check src/arboria/sim/world_loop.py src/arboria/app/metadata.py src/arboria/app/server.py tests/unit/sim/test_world_loop.py tests/unit/app/test_metadata.py tests/unit/app/test_server.py` passed.
+- `mypy src tests/unit` passed.
+
+### Limitations
+
+- World-loop baseline only: ticks do not run biological kernels, event processing, manager planning, horticultural command execution, projection deltas, or checkpoint scheduling yet.

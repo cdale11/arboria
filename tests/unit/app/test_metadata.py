@@ -4,6 +4,7 @@ from pathlib import Path
 from arboria.app.commands import Receipt
 from arboria.app.metadata import METADATA_SCHEMA_VERSION, MetadataStore
 from arboria.sim.clock import ClockState
+from arboria.sim.world_loop import WorldLoopState
 
 
 def test_metadata_store_creates_world_and_rotates_timeline(tmp_path: Path) -> None:
@@ -28,6 +29,21 @@ def test_metadata_store_persists_clock_state(tmp_path: Path) -> None:
     loaded = store.load()
 
     assert loaded.clock == ClockState(sim_time_seconds=1234.5, speed=12.0, paused=True)
+
+
+def test_metadata_store_persists_world_loop_state(tmp_path: Path) -> None:
+    store = MetadataStore(tmp_path)
+    store.initialize_for_process_start()
+
+    store.save_loop(WorldLoopState(sim_tick=3, world_revision=3, consumed_sim_time_seconds=900.0))
+
+    loaded = store.load()
+
+    assert loaded.loop == WorldLoopState(
+        sim_tick=3,
+        world_revision=3,
+        consumed_sim_time_seconds=900.0,
+    )
 
 
 def test_metadata_store_persists_command_receipts(tmp_path: Path) -> None:

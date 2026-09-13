@@ -221,8 +221,22 @@ def test_world_metadata_and_clock_survive_restart(
     assert restarted_world["timeline_id"] != world["timeline_id"]
     assert restarted_world["schema_version"] == 1
     assert restarted_world["request_epoch"] == world["request_epoch"] + 1
+    assert restarted_world["sim_tick"] >= world["sim_tick"]
+    assert restarted_world["world_revision"] >= world["world_revision"]
     assert restarted_clock["paused"] is True
     assert restarted_clock["speed"] == 12.0
+
+
+def test_world_loop_fields_are_reported(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    with TestClient(create_app()) as client:
+        login(client)
+        world = client.get("/api/v1/world").json()
+
+    assert world["base_tick_seconds"] == 300
+    assert world["sim_tick"] >= 0
+    assert world["world_revision"] >= 0
+    assert world["consumed_sim_time_seconds"] >= 0.0
 
 
 def command(world: dict[str, object], kind: str, payload: dict[str, object]) -> dict[str, object]:

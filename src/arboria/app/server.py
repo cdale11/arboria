@@ -14,6 +14,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Redirect
 from fastapi.staticfiles import StaticFiles
 
 from arboria.sim.clock import ClockValidationError, SimulationClock, clock_status_payload
+from arboria.sim.world_loop import WorldLoop, WorldLoopState
 
 from .auth import (
     COOKIE_NAME,
@@ -73,18 +74,21 @@ def create_app() -> FastAPI:
     metadata_store = MetadataStore(lock.root)
     world_metadata: WorldMetadata | None = None
     clock = SimulationClock()
+    world_loop = WorldLoop()
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
-        nonlocal clock, world_metadata
+        nonlocal clock, world_loop, world_metadata
         lock.acquire()
         try:
             world_metadata = metadata_store.initialize_for_process_start()
             clock = SimulationClock.from_state(world_metadata.clock)
+            world_loop = WorldLoop(world_metadata.loop)
             yield
         finally:
             if world_metadata is not None:
                 metadata_store.save_clock(clock.state())
+                metadata_store.save_loop(world_loop.state())
             lock.release()
 
     app = FastAPI(
@@ -121,13 +125,17 @@ def create_app() -> FastAPI:
             if envelope.payload:
                 raise CommandValidationError("clock.pause payload must be empty")
             payload = clock_status_payload(clock.pause())
-            metadata_store.save_clock(clock.state())
+            clock_state = clock.state()
+            metadata_store.save_clock(clock_state)
+            metadata_store.save_loop(world_loop.drain(clock_state))
             return {"clock": payload}
         if envelope.kind == "clock.resume":
             if envelope.payload:
                 raise CommandValidationError("clock.resume payload must be empty")
             payload = clock_status_payload(clock.resume())
-            metadata_store.save_clock(clock.state())
+            clock_state = clock.state()
+            metadata_store.save_clock(clock_state)
+            metadata_store.save_loop(world_loop.drain(clock_state))
             return {"clock": payload}
         if envelope.kind == "clock.set_speed":
             if set(envelope.payload) != {"speed"}:
@@ -137,15 +145,27 @@ def create_app() -> FastAPI:
                 status = clock.set_speed(speed)
             except (TypeError, ValueError, ClockValidationError) as exc:
                 raise CommandValidationError(str(exc)) from exc
-            metadata_store.save_clock(clock.state())
+            clock_state = clock.state()
+            metadata_store.save_clock(clock_state)
+            metadata_store.save_loop(world_loop.drain(clock_state))
             return {"clock": clock_status_payload(status)}
         raise CommandValidationError("unknown command kind")
 
     def save_clock_status() -> dict[str, float | int | bool]:
         require_world_metadata()
         status = clock.status()
-        metadata_store.save_clock(clock.state())
+        clock_state = clock.state()
+        metadata_store.save_clock(clock_state)
+        metadata_store.save_loop(world_loop.drain(clock_state))
         return clock_status_payload(status)
+
+    def loop_payload(loop: WorldLoopState) -> dict[str, int | float]:
+        return {
+            "sim_tick": loop.sim_tick,
+            "world_revision": loop.world_revision,
+            "consumed_sim_time_seconds": loop.consumed_sim_time_seconds,
+            "base_tick_seconds": 300,
+        }
 
     @app.middleware("http")
     async def reject_cross_origin_mutations(
@@ -249,12 +269,15 @@ def create_app() -> FastAPI:
         if not is_authenticated(request):
             return JSONResponse({"detail": "authentication required"}, status_code=401)
         metadata = require_world_metadata()
+        loop = world_loop.drain(clock.state())
+        metadata_store.save_loop(loop)
         return JSONResponse(
             {
                 "world_id": metadata.world_id,
                 "timeline_id": metadata.timeline_id,
                 "schema_version": metadata.schema_version,
                 "request_epoch": metadata.request_epoch,
+                **loop_payload(loop),
             }
         )
 
@@ -285,17 +308,20 @@ def create_app() -> FastAPI:
             return
         await websocket.accept()
         metadata = require_world_metadata()
+        loop = world_loop.drain(clock.state())
+        metadata_store.save_loop(loop)
         await websocket.send_json(
             {
                 "schema_version": 1,
                 "world_id": metadata.world_id,
                 "timeline_id": metadata.timeline_id,
-                "revision": 0,
-                "base_revision": 0,
+                "revision": loop.world_revision,
+                "base_revision": loop.world_revision,
                 "kind": "snapshot",
                 "payload": {
                     "request_epoch": metadata.request_epoch,
                     "clock": save_clock_status(),
+                    "loop": loop_payload(world_loop.state()),
                 },
             }
         )
@@ -306,13 +332,15 @@ def create_app() -> FastAPI:
                     await websocket.close(code=status.WS_1009_MESSAGE_TOO_BIG)
                     return
                 if message == '{"kind":"ping"}':
+                    loop = world_loop.drain(clock.state())
+                    metadata_store.save_loop(loop)
                     await websocket.send_json(
                         {
                             "schema_version": 1,
                             "world_id": metadata.world_id,
                             "timeline_id": metadata.timeline_id,
-                            "revision": 0,
-                            "base_revision": 0,
+                            "revision": loop.world_revision,
+                            "base_revision": loop.world_revision,
                             "kind": "pong",
                             "payload": {},
                         }
@@ -402,7 +430,9 @@ def create_app() -> FastAPI:
             return rejection
         require_world_metadata()
         payload = clock_status_payload(clock.pause())
-        metadata_store.save_clock(clock.state())
+        clock_state = clock.state()
+        metadata_store.save_clock(clock_state)
+        metadata_store.save_loop(world_loop.drain(clock_state))
         return JSONResponse(payload)
 
     @app.post("/api/v1/clock/resume")
@@ -412,7 +442,9 @@ def create_app() -> FastAPI:
             return rejection
         require_world_metadata()
         payload = clock_status_payload(clock.resume())
-        metadata_store.save_clock(clock.state())
+        clock_state = clock.state()
+        metadata_store.save_clock(clock_state)
+        metadata_store.save_loop(world_loop.drain(clock_state))
         return JSONResponse(payload)
 
     @app.post("/api/v1/clock/speed")
@@ -429,7 +461,9 @@ def create_app() -> FastAPI:
             next_status = clock.set_speed(speed)
         except (KeyError, TypeError, ValueError, ClockValidationError) as exc:
             return JSONResponse({"detail": str(exc)}, status_code=400)
-        metadata_store.save_clock(clock.state())
+        clock_state = clock.state()
+        metadata_store.save_clock(clock_state)
+        metadata_store.save_loop(world_loop.drain(clock_state))
         return JSONResponse(clock_status_payload(next_status))
 
     if static_dir.exists():

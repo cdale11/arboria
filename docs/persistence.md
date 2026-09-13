@@ -34,7 +34,7 @@ var/
 
 ## 3. Versioned metadata
 
-Implemented R1 metadata currently records one `worlds` row with world UUID, process-start timeline UUID, schema version, optional active checkpoint ID, creation/update timestamps, and clock `sim_time_seconds`, `speed`, and `paused` fields. Startup keeps the world UUID, rotates the timeline UUID, and loads the saved clock state without adding elapsed wall time while the server was stopped.
+Implemented R1 metadata currently records one `worlds` row with world UUID, process-start timeline UUID, schema version, request epoch, optional active checkpoint ID, creation/update timestamps, clock `sim_time_seconds`, `speed`, `paused` fields, `sim_tick`, `world_revision`, and consumed simulation time. Startup keeps the world UUID, rotates the timeline UUID/request epoch, and loads the saved clock/tick state without adding elapsed wall time while the server was stopped.
 
 Minimum full SQLite entities:
 

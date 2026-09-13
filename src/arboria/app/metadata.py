@@ -11,6 +11,7 @@ from pathlib import Path
 
 from arboria.app.commands import Receipt
 from arboria.sim.clock import ClockState
+from arboria.sim.world_loop import WorldLoopState
 
 from .auth import data_dir
 
@@ -24,6 +25,7 @@ class WorldMetadata:
     schema_version: int
     request_epoch: int
     clock: ClockState
+    loop: WorldLoopState
 
 
 class MetadataStore:
@@ -39,7 +41,8 @@ class MetadataStore:
             self._create_schema(connection)
             row = connection.execute(
                 "SELECT world_id, schema_version, request_epoch, clock_sim_time_seconds, "
-                "clock_speed, clock_paused FROM worlds WHERE id = 1"
+                "clock_speed, clock_paused, sim_tick, world_revision, "
+                "consumed_sim_time_seconds FROM worlds WHERE id = 1"
             ).fetchone()
             next_timeline = str(uuid.uuid4())
             now = int(time.time())
@@ -61,6 +64,7 @@ class MetadataStore:
                     ),
                 )
                 clock = ClockState(0.0, 48.0, False)
+                loop = WorldLoopState(0, 0, 0.0)
             else:
                 world_id = str(row["world_id"])
                 epoch = int(row["request_epoch"]) + 1
@@ -74,8 +78,20 @@ class MetadataStore:
                     speed=float(row["clock_speed"]),
                     paused=bool(row["clock_paused"]),
                 )
+                loop = WorldLoopState(
+                    sim_tick=int(row["sim_tick"]),
+                    world_revision=int(row["world_revision"]),
+                    consumed_sim_time_seconds=float(row["consumed_sim_time_seconds"]),
+                )
             connection.commit()
-            return WorldMetadata(world_id, next_timeline, METADATA_SCHEMA_VERSION, epoch, clock)
+            return WorldMetadata(
+                world_id,
+                next_timeline,
+                METADATA_SCHEMA_VERSION,
+                epoch,
+                clock,
+                loop,
+            )
 
     def save_clock(self, clock: ClockState) -> None:
         with self._connect() as connection:
@@ -86,11 +102,26 @@ class MetadataStore:
             )
             connection.commit()
 
+    def save_loop(self, loop: WorldLoopState) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                "UPDATE worlds SET sim_tick = ?, world_revision = ?, "
+                "consumed_sim_time_seconds = ?, updated_at = ? WHERE id = 1",
+                (
+                    loop.sim_tick,
+                    loop.world_revision,
+                    loop.consumed_sim_time_seconds,
+                    int(time.time()),
+                ),
+            )
+            connection.commit()
+
     def load(self) -> WorldMetadata:
         with self._connect() as connection:
             row = connection.execute(
                 "SELECT world_id, timeline_id, schema_version, request_epoch, "
-                "clock_sim_time_seconds, clock_speed, clock_paused FROM worlds WHERE id = 1"
+                "clock_sim_time_seconds, clock_speed, clock_paused, sim_tick, "
+                "world_revision, consumed_sim_time_seconds FROM worlds WHERE id = 1"
             ).fetchone()
             if row is None:
                 raise RuntimeError("World metadata has not been initialized.")
@@ -103,6 +134,11 @@ class MetadataStore:
                     sim_time_seconds=float(row["clock_sim_time_seconds"]),
                     speed=float(row["clock_speed"]),
                     paused=bool(row["clock_paused"]),
+                ),
+                loop=WorldLoopState(
+                    sim_tick=int(row["sim_tick"]),
+                    world_revision=int(row["world_revision"]),
+                    consumed_sim_time_seconds=float(row["consumed_sim_time_seconds"]),
                 ),
             )
 
@@ -179,7 +215,11 @@ class MetadataStore:
             "updated_at INTEGER NOT NULL, "
             "clock_sim_time_seconds REAL NOT NULL CHECK (clock_sim_time_seconds >= 0), "
             "clock_speed REAL NOT NULL CHECK (clock_speed >= 1 AND clock_speed <= 144), "
-            "clock_paused INTEGER NOT NULL CHECK (clock_paused IN (0, 1))"
+            "clock_paused INTEGER NOT NULL CHECK (clock_paused IN (0, 1)), "
+            "sim_tick INTEGER NOT NULL DEFAULT 0 CHECK (sim_tick >= 0), "
+            "world_revision INTEGER NOT NULL DEFAULT 0 CHECK (world_revision >= 0), "
+            "consumed_sim_time_seconds REAL NOT NULL DEFAULT 0 "
+            "CHECK (consumed_sim_time_seconds >= 0)"
             ")"
         )
         columns = {
@@ -190,6 +230,21 @@ class MetadataStore:
             connection.execute(
                 "ALTER TABLE worlds ADD COLUMN request_epoch INTEGER NOT NULL DEFAULT 1 "
                 "CHECK (request_epoch >= 1)"
+            )
+        if "sim_tick" not in columns:
+            connection.execute(
+                "ALTER TABLE worlds ADD COLUMN sim_tick INTEGER NOT NULL DEFAULT 0 "
+                "CHECK (sim_tick >= 0)"
+            )
+        if "world_revision" not in columns:
+            connection.execute(
+                "ALTER TABLE worlds ADD COLUMN world_revision INTEGER NOT NULL DEFAULT 0 "
+                "CHECK (world_revision >= 0)"
+            )
+        if "consumed_sim_time_seconds" not in columns:
+            connection.execute(
+                "ALTER TABLE worlds ADD COLUMN consumed_sim_time_seconds REAL NOT NULL "
+                "DEFAULT 0 CHECK (consumed_sim_time_seconds >= 0)"
             )
         connection.execute(
             "CREATE TABLE IF NOT EXISTS command_receipts ("
