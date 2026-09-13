@@ -34,14 +34,14 @@ def test_health_reports_current_implementation_scope(
     assert response.status_code == 200
     payload = response.json()
     assert payload["status"] == "ok"
-    assert payload["phase"] == "r1-world-metadata-baseline"
+    assert payload["phase"] == "r1-living-nursery-baseline"
     assert payload["implemented"]["server"] is True
     assert payload["implemented"]["authentication"] is True
     assert payload["implemented"]["process_lock"] is True
     assert payload["implemented"]["world_metadata"] is True
     assert payload["implemented"]["stream_protocol"] is True
     assert payload["implemented"]["checkpoint_layout"] is True
-    assert payload["implemented"]["simulation"] is False
+    assert payload["implemented"]["simulation"] is True
     assert payload["implemented"]["persistence"] is False
 
 

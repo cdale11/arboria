@@ -19,6 +19,15 @@ from arboria.sim.clock import (
     SimulationClock,
     clock_status_payload,
 )
+from arboria.sim.nursery import (
+    NURSERY_SCHEMA_VERSION,
+    advance_nursery,
+    organs_from_payload,
+    organs_to_payload,
+    project_plants,
+    starter_organs,
+    summarize,
+)
 from arboria.sim.world_loop import WorldLoop, WorldLoopState
 
 from .auth import (
@@ -91,16 +100,21 @@ def create_app() -> FastAPI:
     world_metadata: WorldMetadata | None = None
     clock = SimulationClock()
     world_loop = WorldLoop()
+    nursery_organs = starter_organs()
+    nursery_uptake_kg = 0.0
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
-        nonlocal clock, world_loop, world_metadata
+        nonlocal clock, world_loop, world_metadata, nursery_organs, nursery_uptake_kg
         lock.acquire()
         try:
             checkpoint_writer.cleanup_interrupted_generations()
             world_metadata = metadata_store.initialize_for_process_start()
             if world_metadata.active_checkpoint_id is not None:
-                checkpoint_writer.load(world_metadata.active_checkpoint_id)
+                _manifest, state = checkpoint_writer.load(
+                    world_metadata.active_checkpoint_id
+                )
+                nursery_organs = organs_from_payload(state.get("nursery_organs", []))
             clock = SimulationClock.from_state(world_metadata.clock)
             world_loop = WorldLoop(world_metadata.loop)
             yield
@@ -127,6 +141,28 @@ def create_app() -> FastAPI:
             world_metadata = metadata_store.initialize_for_process_start()
         return world_metadata
 
+    def tick_world() -> WorldLoopState:
+        nonlocal nursery_organs, nursery_uptake_kg
+        previous = world_loop.state().sim_tick
+        loop = world_loop.drain(clock.state())
+        advanced = loop.sim_tick - previous
+        if advanced > 0:
+            nursery_organs, uptake = advance_nursery(nursery_organs, advanced)
+            nursery_uptake_kg += uptake
+        metadata_store.save_loop(loop)
+        return loop
+
+    def nursery_payload() -> dict[str, Any]:
+        summary = summarize(nursery_organs, nursery_uptake_kg)
+        return {
+            "schema_version": NURSERY_SCHEMA_VERSION,
+            "plant_count": summary.plant_count,
+            "organ_count": summary.organ_count,
+            "reserve_carbon_kg": summary.reserve_carbon_kg,
+            "structural_carbon_kg": summary.structural_carbon_kg,
+            "atmospheric_carbon_uptake_kg": summary.atmospheric_carbon_uptake_kg,
+        }
+
     def receipt_payload(receipt: Receipt) -> dict[str, Any]:
         payload: dict[str, Any] = {
             "command_id": receipt.command_id,
@@ -148,7 +184,7 @@ def create_app() -> FastAPI:
             payload = clock_status_payload(clock.pause())
             clock_state = clock.state()
             metadata_store.save_clock(clock_state)
-            metadata_store.save_loop(world_loop.drain(clock_state))
+            tick_world()
             return {"clock": payload}
         if envelope.kind == "clock.resume":
             if envelope.payload:
@@ -156,7 +192,7 @@ def create_app() -> FastAPI:
             payload = clock_status_payload(clock.resume())
             clock_state = clock.state()
             metadata_store.save_clock(clock_state)
-            metadata_store.save_loop(world_loop.drain(clock_state))
+            tick_world()
             return {"clock": payload}
         if envelope.kind == "clock.set_speed":
             if set(envelope.payload) != {"speed"}:
@@ -168,7 +204,7 @@ def create_app() -> FastAPI:
                 raise CommandValidationError(str(exc)) from exc
             clock_state = clock.state()
             metadata_store.save_clock(clock_state)
-            metadata_store.save_loop(world_loop.drain(clock_state))
+            tick_world()
             return {"clock": clock_status_payload(status)}
         raise CommandValidationError("unknown command kind")
 
@@ -177,7 +213,7 @@ def create_app() -> FastAPI:
         status = clock.status()
         clock_state = clock.state()
         metadata_store.save_clock(clock_state)
-        metadata_store.save_loop(world_loop.drain(clock_state))
+        tick_world()
         return clock_status_payload(status)
 
     def loop_payload(loop: WorldLoopState) -> dict[str, int | float]:
@@ -192,7 +228,7 @@ def create_app() -> FastAPI:
         nonlocal world_metadata
         metadata = require_world_metadata()
         clock_state = clock.state()
-        loop_state = world_loop.drain(clock_state)
+        loop_state = tick_world()
         metadata_store.save_clock(clock_state)
         metadata_store.save_loop(loop_state)
         record, manifest = checkpoint_writer.create(
@@ -202,6 +238,8 @@ def create_app() -> FastAPI:
             parent_checkpoint_id=metadata.active_checkpoint_id,
             receipt_count=metadata_store.receipt_count(),
             purpose=purpose,
+            nursery_organs=organs_to_payload(nursery_organs),
+            nursery_schema_version=NURSERY_SCHEMA_VERSION,
         )
         metadata_store.register_checkpoint(
             checkpoint_id=record.checkpoint_id,
@@ -313,7 +351,7 @@ def create_app() -> FastAPI:
   <body>
     <main>
       <h1>Arboria</h1>
-      <p>Shared password required. The plant simulation is not implemented yet.</p>
+      <p>Shared password required. The living nursery has two starter plants.</p>
       <form method="post" action="/api/v1/auth/login">
         <label>
           Password
@@ -330,7 +368,7 @@ def create_app() -> FastAPI:
     def health() -> dict[str, Any]:
         return {
             "status": "ok",
-            "phase": "r1-world-metadata-baseline",
+            "phase": "r1-living-nursery-baseline",
             "implemented": {
                 "server": True,
                 "static_frontend": static_dir.exists(),
@@ -340,7 +378,7 @@ def create_app() -> FastAPI:
                 "simulation_clock": True,
                 "stream_protocol": True,
                 "checkpoint_layout": True,
-                "simulation": False,
+                "simulation": True,
                 "persistence": False,
                 "companion": False,
             },
@@ -359,8 +397,7 @@ def create_app() -> FastAPI:
         if not is_authenticated(request):
             return JSONResponse({"detail": "authentication required"}, status_code=401)
         metadata = require_world_metadata()
-        loop = world_loop.drain(clock.state())
-        metadata_store.save_loop(loop)
+        loop = tick_world()
         maybe_autosave()
         metadata = require_world_metadata()
         return JSONResponse(
@@ -371,6 +408,7 @@ def create_app() -> FastAPI:
                 "request_epoch": metadata.request_epoch,
                 "active_checkpoint_id": metadata.active_checkpoint_id,
                 "last_autosave_unix_s": metadata.last_autosave_unix_s,
+                "nursery": nursery_payload(),
                 **loop_payload(loop),
             }
         )
@@ -424,7 +462,7 @@ def create_app() -> FastAPI:
 
     @app.post("/api/v1/saves/restore")
     async def restore_save(request: Request) -> Response:
-        nonlocal clock, world_loop, world_metadata
+        nonlocal clock, world_loop, world_metadata, nursery_organs, nursery_uptake_kg
         rejection = require_auth_and_csrf(request)
         if rejection is not None:
             return rejection
@@ -456,6 +494,7 @@ def create_app() -> FastAPI:
                 world_revision=int(loop_state["world_revision"]),
                 consumed_sim_time_seconds=float(loop_state["consumed_sim_time_seconds"]),
             )
+            restored_nursery = organs_from_payload(state.get("nursery_organs", []))
         except (FileNotFoundError, KeyError, TypeError, ValueError) as exc:
             return JSONResponse({"detail": str(exc)}, status_code=400)
         clock_state = restored_clock.state()
@@ -466,6 +505,8 @@ def create_app() -> FastAPI:
         )
         clock = restored_clock
         world_loop = WorldLoop(restored_loop_state)
+        nursery_organs = restored_nursery
+        nursery_uptake_kg = 0.0
         return JSONResponse(
             {
                 "restored": True,
@@ -476,6 +517,7 @@ def create_app() -> FastAPI:
                     "timeline_id": world_metadata.timeline_id,
                     "request_epoch": world_metadata.request_epoch,
                     "active_checkpoint_id": world_metadata.active_checkpoint_id,
+                    "nursery": nursery_payload(),
                     **loop_payload(world_metadata.loop),
                 },
                 "clock": clock_status_payload(clock.status()),
@@ -509,8 +551,7 @@ def create_app() -> FastAPI:
             return
         await websocket.accept()
         metadata = require_world_metadata()
-        loop = world_loop.drain(clock.state())
-        metadata_store.save_loop(loop)
+        loop = tick_world()
         await websocket.send_json(
             {
                 "schema_version": 1,
@@ -523,6 +564,7 @@ def create_app() -> FastAPI:
                     "request_epoch": metadata.request_epoch,
                     "clock": save_clock_status(),
                     "loop": loop_payload(world_loop.state()),
+                    "nursery": nursery_payload(),
                 },
             }
         )
@@ -533,8 +575,7 @@ def create_app() -> FastAPI:
                     await websocket.close(code=status.WS_1009_MESSAGE_TOO_BIG)
                     return
                 if message == '{"kind":"ping"}':
-                    loop = world_loop.drain(clock.state())
-                    metadata_store.save_loop(loop)
+                    loop = tick_world()
                     await websocket.send_json(
                         {
                             "schema_version": 1,
@@ -624,6 +665,56 @@ def create_app() -> FastAPI:
             return JSONResponse({"detail": "authentication required"}, status_code=401)
         return JSONResponse(save_clock_status())
 
+    @app.get("/api/v1/plants")
+    def list_plants(request: Request) -> Response:
+        if not is_authenticated(request):
+            return JSONResponse({"detail": "authentication required"}, status_code=401)
+        require_world_metadata()
+        loop = tick_world()
+        plants = [
+            {
+                "plant_id": projection.plant_id,
+                "organ_count": projection.organ_count,
+                "leaf_area_m2": projection.leaf_area_m2,
+                "stem_length_m": projection.stem_length_m,
+                "reserve_carbon_kg": projection.reserve_carbon_kg,
+                "structural_carbon_kg": projection.structural_carbon_kg,
+            }
+            for projection in project_plants(nursery_organs)
+        ]
+        return JSONResponse(
+            {
+                "revision": loop.world_revision,
+                "sim_tick": loop.sim_tick,
+                "nursery": nursery_payload(),
+                "plants": plants,
+            }
+        )
+
+    @app.get("/api/v1/plants/{plant_id}")
+    def plant_detail(request: Request, plant_id: int) -> Response:
+        if not is_authenticated(request):
+            return JSONResponse({"detail": "authentication required"}, status_code=401)
+        if plant_id <= 0:
+            return JSONResponse({"detail": "unknown plant"}, status_code=404)
+        require_world_metadata()
+        loop = tick_world()
+        members = [organ for organ in nursery_organs if organ.plant_id == plant_id]
+        if not members:
+            return JSONResponse({"detail": "unknown plant"}, status_code=404)
+        return JSONResponse(
+            {
+                "revision": loop.world_revision,
+                "sim_tick": loop.sim_tick,
+                "plant_id": plant_id,
+                "organs": [
+                    entry
+                    for entry in organs_to_payload(nursery_organs)
+                    if int(str(entry["plant_id"])) == plant_id
+                ],
+            }
+        )
+
     @app.post("/api/v1/clock/pause")
     def pause_clock(request: Request) -> Response:
         rejection = require_auth_and_csrf(request)
@@ -633,7 +724,7 @@ def create_app() -> FastAPI:
         payload = clock_status_payload(clock.pause())
         clock_state = clock.state()
         metadata_store.save_clock(clock_state)
-        metadata_store.save_loop(world_loop.drain(clock_state))
+        tick_world()
         return JSONResponse(payload)
 
     @app.post("/api/v1/clock/resume")
@@ -645,7 +736,7 @@ def create_app() -> FastAPI:
         payload = clock_status_payload(clock.resume())
         clock_state = clock.state()
         metadata_store.save_clock(clock_state)
-        metadata_store.save_loop(world_loop.drain(clock_state))
+        tick_world()
         return JSONResponse(payload)
 
     @app.post("/api/v1/clock/speed")
@@ -664,7 +755,7 @@ def create_app() -> FastAPI:
             return JSONResponse({"detail": str(exc)}, status_code=400)
         clock_state = clock.state()
         metadata_store.save_clock(clock_state)
-        metadata_store.save_loop(world_loop.drain(clock_state))
+        tick_world()
         return JSONResponse(clock_status_payload(next_status))
 
     if static_dir.exists():

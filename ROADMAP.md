@@ -39,6 +39,7 @@ Dependency: P0. This is the first playable release, not a skeleton server.
 - [x] Implement authenticated single-world ownership metadata. Evidence: `docs/evidence/R1-world-metadata.md`.
 - [x] Implement bounded command envelope, request epoch, deduplication, validation, and execution receipts. Evidence: `docs/evidence/R1-command-envelope.md`.
 - [x] Implement bounded WebSocket/server-stream baseline for authenticated world/clock snapshot and ping messages. Evidence: `docs/evidence/R1-stream-baseline.md`.
+- [x] Expose living-nursery projections through stream snapshots. Evidence: `docs/evidence/R1-living-nursery.md`.
 - [ ] Implement reconnect/resync behavior for biological projections and revisioned deltas.
 
 #### Time and world lifecycle
@@ -47,6 +48,7 @@ Dependency: P0. This is the first playable release, not a skeleton server.
 - [x] Persist clock/world lifecycle state so restart resumes saved simulation time without wall-clock catch-up. Evidence: `docs/evidence/R1-world-metadata.md`.
 - [x] Implement one-writer world loop consuming clock ticks at the documented 300-sim-second base tick. Evidence: `docs/evidence/R1-world-loop.md`.
 - [ ] Add lifecycle controls for pause/resume/save/restore/shutdown that remain serviceable while biological progression is paused.
+- [x] Implement minimal living-nursery tick with starter plants, biological projections, inspection, and lifecycle controls. Evidence: `docs/evidence/R1-living-nursery.md`.
 
 #### Persistence and recovery
 
@@ -74,6 +76,7 @@ Dependency: P0. This is the first playable release, not a skeleton server.
 
 - [ ] Implement procedural 2.5D nursery rendering with generated assets and no gameplay dependence on visual level of detail.
 - [ ] Implement usable desktop/touch inspection, care, protection, shop, save, and clock controls.
+- [x] Implement minimal usable inspection, save, and clock controls for the living nursery. Evidence: `docs/evidence/R1-living-nursery.md`.
 - [ ] Implement real inventory, suppliers, purchases, demand-limited plant sales, and finite cash/material accounting.
 - [ ] Add economy tests for transaction consistency, duplicate sales, bounded demand, and anti-arbitrage.
 

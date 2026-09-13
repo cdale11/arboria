@@ -2,6 +2,32 @@
 
 Records delivered work and actual evidence. Planned features belong in [ROADMAP.md](ROADMAP.md), not in claims of implemented behavior.
 
+## 2026-09-14 — R1 living-nursery baseline
+
+### Added
+
+- Added pure deterministic starter nursery with two root/stem/leaf-cohort plants.
+- Wired bounded carbon assimilation and resource-bounded stem growth into world ticks.
+- Added authenticated `/api/v1/plants` and `/api/v1/plants/{id}` inspection projections.
+- Added nursery summaries to world status and stream snapshots.
+- Added nursery biology to checkpoint state with restore and startup recovery.
+- Added minimal frontend nursery inspection rendering with honest limitations.
+- Added backend and persistence tests for tick growth, plant APIs, checkpoints, and restore.
+- Updated roadmap, README, biology/architecture-adjacent docs, and evidence documentation.
+
+### Evidence and verification
+
+- `python -m pytest tests/unit` passed with 80 tests.
+- `ruff check .` passed.
+- `mypy src tests/unit` passed.
+- `npm --prefix web run check` passed.
+- `npm --prefix web run test` passed.
+- `npm --prefix web run build` passed.
+
+### Limitations
+
+- Living-nursery baseline only: no water/nutrient uptake, root-zone environment, stress, damage, death, species catalog, economy, companion, reconnect deltas, procedural 2.5D rendering, touch controls, planting/care/sales actions, export/import, or calibration exists yet.
+
 ## 2026-09-12 — P0 planning baseline
 
 ### Added

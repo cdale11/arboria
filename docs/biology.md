@@ -35,6 +35,8 @@ Implemented R1 vegetative growth currently applies resource-bounded elongation t
 
 Implemented R1 carbon assimilation currently uses the documented provisional saturating light response for live leaf cohorts. It adds atmospheric carbon uptake to the plant root reserve-carbon pool and reports the boundary flux. Temperature, water, and nutrient response factors are bounded `[0,1]`. This is not a Farquhar, C4, or CAM model. Canopy shading, root/substrate uptake, nutrient chemistry, respiration, stress, damage, death, and species calibration remain unimplemented.
 
+Implemented R1 living nursery currently ticks two deterministic starter plants through assimilation followed by small resource-bounded stem demands. Nursery organs persist in checkpoint state and recover on restore/startup. Water, nutrient, stress, and calibration factors remain provisional placeholders.
+
 ## 3. Generic update rules
 
 For a conserved pool `x` in kg:
