@@ -287,6 +287,19 @@ def test_save_listing_requires_authentication(monkeypatch: MonkeyPatch, tmp_path
     assert response.status_code == 401
 
 
+def test_save_listing_reports_autosave_status(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    with TestClient(create_app()) as client:
+        login(client)
+        response = client.get("/api/v1/saves")
+
+    assert response.status_code == 200
+    assert response.json()["autosave_interval_seconds"] == 60
+    assert response.json()["last_autosave_unix_s"] is None
+
+
 def test_named_save_requires_csrf(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
     configure_auth(monkeypatch, tmp_path)
     with TestClient(create_app()) as client:
@@ -315,6 +328,21 @@ def test_named_save_creates_checkpoint_and_list_entry(
     assert snapshot["protected"] is True
     assert (tmp_path / "checkpoints" / snapshot["checkpoint_id"] / "manifest.json").is_file()
     assert listed.json()["snapshots"] == [snapshot]
+
+
+def test_world_status_triggers_due_autosave(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("ARBORIA_AUTOSAVE_INTERVAL_SECONDS", "0")
+    configure_auth(monkeypatch, tmp_path)
+    with TestClient(create_app()) as client:
+        login(client)
+        world = client.get("/api/v1/world").json()
+        saves = client.get("/api/v1/saves").json()
+
+    assert world["last_autosave_unix_s"] is not None
+    assert saves["last_autosave_unix_s"] == world["last_autosave_unix_s"]
+    assert (tmp_path / "checkpoints" / world["active_checkpoint_id"] / "manifest.json").is_file()
 
 
 def test_named_save_rejects_path_like_names(

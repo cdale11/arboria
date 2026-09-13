@@ -27,11 +27,13 @@ def test_checkpoint_writer_creates_immutable_manifest_and_state(tmp_path: Path) 
     assert checkpoint_dir.is_dir()
     assert not (tmp_path / "checkpoints" / f".{record.checkpoint_id}.tmp").exists()
     assert manifest["format_version"] == CHECKPOINT_FORMAT_VERSION
+    assert manifest["purpose"] == "manual"
     assert manifest["checkpoint_id"] == record.checkpoint_id
     assert manifest["sim_tick"] == 2
     state_path = checkpoint_dir / "state.json"
     state = json.loads(state_path.read_text(encoding="utf-8"))
     assert state["world_id"] == metadata.world_id
+    assert state["purpose"] == "manual"
     assert state["loop"]["world_revision"] == 2
     assert manifest["files"][0]["sha256"] == hashlib.sha256(state_path.read_bytes()).hexdigest()
     assert record.manifest_hash == hashlib.sha256(

@@ -93,6 +93,27 @@ def test_metadata_store_registers_active_checkpoint(tmp_path: Path) -> None:
     assert loaded.active_checkpoint_id == "checkpoint-a"
 
 
+def test_metadata_store_marks_last_autosave(tmp_path: Path) -> None:
+    store = MetadataStore(tmp_path)
+    store.initialize_for_process_start()
+    store.register_checkpoint(
+        checkpoint_id="checkpoint-a",
+        parent_checkpoint_id=None,
+        sim_tick=1,
+        world_revision=1,
+        created_unix_s=123,
+        manifest_hash="abc123",
+        status="complete",
+        purpose="autosave",
+    )
+
+    store.mark_autosave("checkpoint-a", 123)
+    loaded = store.load()
+
+    assert loaded.active_checkpoint_id == "checkpoint-a"
+    assert loaded.last_autosave_unix_s == 123
+
+
 def test_metadata_store_names_and_lists_snapshots(tmp_path: Path) -> None:
     store = MetadataStore(tmp_path)
     store.initialize_for_process_start()

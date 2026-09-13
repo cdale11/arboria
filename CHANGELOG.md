@@ -381,3 +381,24 @@ Records delivered work and actual evidence. Planned features belong in [ROADMAP.
 ### Limitations
 
 - Metadata-restore baseline only: no biology, economy, learner state, RNG streams, pending events, pre-restore safety snapshots, export/import, autosave, retention, UI, or full corruption-recovery flow exists yet.
+
+## 2026-09-13 — R1 metadata-autosave baseline
+
+### Added
+
+- Added metadata-only autosave checkpoint purpose and persisted last autosave timestamp.
+- Added checkpoint `purpose` to manifests, state payloads, and SQLite checkpoint records.
+- Added autosave status fields to `/api/v1/saves`.
+- Triggered due autosaves from authenticated world status checks, using a default 60-second interval and `ARBORIA_AUTOSAVE_INTERVAL_SECONDS` for tests/configuration.
+- Added tests for autosave status, due autosave creation, autosave metadata persistence, and checkpoint purpose fields.
+- Updated README, roadmap, persistence notes, and evidence documentation.
+
+### Evidence and verification
+
+- `python -m pytest tests/unit/app/test_checkpoints.py tests/unit/app/test_metadata.py tests/unit/app/test_server.py` passed with 41 tests and the documented FastAPI/Starlette `TestClient` deprecation warning.
+- `ruff check src/arboria/app/checkpoints.py src/arboria/app/metadata.py src/arboria/app/server.py tests/unit/app/test_checkpoints.py tests/unit/app/test_metadata.py tests/unit/app/test_server.py` passed.
+- `mypy src tests/unit` passed.
+
+### Limitations
+
+- Metadata-autosave baseline only: no background autosave worker, restore safety snapshot, retention policy, export/import, biology/economy/learner state, or UI exists yet.

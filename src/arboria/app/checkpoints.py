@@ -28,6 +28,7 @@ class CheckpointRecord:
     created_unix_s: int
     manifest_hash: str
     status: str
+    purpose: str
 
 
 class CheckpointWriter:
@@ -45,6 +46,7 @@ class CheckpointWriter:
         loop: WorldLoopState,
         parent_checkpoint_id: str | None,
         receipt_count: int,
+        purpose: str = "manual",
     ) -> tuple[CheckpointRecord, dict[str, Any]]:
         self.checkpoints_dir.mkdir(parents=True, exist_ok=True)
         checkpoint_id = str(uuid.uuid4())
@@ -56,6 +58,7 @@ class CheckpointWriter:
             "world_id": metadata.world_id,
             "timeline_id": metadata.timeline_id,
             "request_epoch": metadata.request_epoch,
+            "purpose": purpose,
             "schema_version": metadata.schema_version,
             "clock": {
                 "sim_time_seconds": clock.sim_time_seconds,
@@ -85,6 +88,7 @@ class CheckpointWriter:
             "created_unix_s": created,
             "schema_version": metadata.schema_version,
             "request_epoch": metadata.request_epoch,
+            "purpose": purpose,
             "files": [
                 {
                     "relative_path": "state.json",
@@ -107,6 +111,7 @@ class CheckpointWriter:
             created_unix_s=created,
             manifest_hash=manifest_hash,
             status="complete",
+            purpose=purpose,
         )
         return record, manifest
 

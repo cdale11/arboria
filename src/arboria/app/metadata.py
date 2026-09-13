@@ -25,6 +25,7 @@ class WorldMetadata:
     schema_version: int
     request_epoch: int
     active_checkpoint_id: str | None
+    last_autosave_unix_s: int | None
     clock: ClockState
     loop: WorldLoopState
 
@@ -50,6 +51,7 @@ class MetadataStore:
             self._create_schema(connection)
             row = connection.execute(
                 "SELECT world_id, schema_version, request_epoch, active_checkpoint_id, "
+                "last_autosave_unix_s, "
                 "clock_sim_time_seconds, clock_speed, clock_paused, sim_tick, world_revision, "
                 "consumed_sim_time_seconds FROM worlds WHERE id = 1"
             ).fetchone()
@@ -75,9 +77,11 @@ class MetadataStore:
                 clock = ClockState(0.0, 48.0, False)
                 loop = WorldLoopState(0, 0, 0.0)
                 active_checkpoint_id = None
+                last_autosave_unix_s = None
             else:
                 world_id = str(row["world_id"])
                 active_checkpoint_id = row["active_checkpoint_id"]
+                last_autosave_unix_s = row["last_autosave_unix_s"]
                 epoch = int(row["request_epoch"]) + 1
                 connection.execute(
                     "UPDATE worlds SET timeline_id = ?, request_epoch = ?, updated_at = ? "
@@ -101,6 +105,7 @@ class MetadataStore:
                 METADATA_SCHEMA_VERSION,
                 epoch,
                 active_checkpoint_id,
+                last_autosave_unix_s,
                 clock,
                 loop,
             )
@@ -132,7 +137,7 @@ class MetadataStore:
         with self._connect() as connection:
             row = connection.execute(
                 "SELECT world_id, timeline_id, schema_version, request_epoch, "
-                "active_checkpoint_id, clock_sim_time_seconds, clock_speed, "
+                "active_checkpoint_id, last_autosave_unix_s, clock_sim_time_seconds, clock_speed, "
                 "clock_paused, sim_tick, world_revision, "
                 "consumed_sim_time_seconds FROM worlds WHERE id = 1"
             ).fetchone()
@@ -144,6 +149,7 @@ class MetadataStore:
                 schema_version=int(row["schema_version"]),
                 request_epoch=int(row["request_epoch"]),
                 active_checkpoint_id=row["active_checkpoint_id"],
+                last_autosave_unix_s=row["last_autosave_unix_s"],
                 clock=ClockState(
                     sim_time_seconds=float(row["clock_sim_time_seconds"]),
                     speed=float(row["clock_speed"]),
@@ -172,13 +178,14 @@ class MetadataStore:
         created_unix_s: int,
         manifest_hash: str,
         status: str,
+        purpose: str = "manual",
     ) -> None:
         with self._connect() as connection:
             self._create_schema(connection)
             connection.execute(
                 "INSERT INTO checkpoints (checkpoint_id, parent_checkpoint_id, sim_tick, "
-                "world_revision, created_unix_s, manifest_hash, status) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "world_revision, created_unix_s, manifest_hash, status, purpose) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     checkpoint_id,
                     parent_checkpoint_id,
@@ -187,11 +194,22 @@ class MetadataStore:
                     created_unix_s,
                     manifest_hash,
                     status,
+                    purpose,
                 ),
             )
             connection.execute(
                 "UPDATE worlds SET active_checkpoint_id = ?, updated_at = ? WHERE id = 1",
                 (checkpoint_id, int(time.time())),
+            )
+            connection.commit()
+
+    def mark_autosave(self, checkpoint_id: str, created_unix_s: int) -> None:
+        with self._connect() as connection:
+            self._create_schema(connection)
+            connection.execute(
+                "UPDATE worlds SET last_autosave_unix_s = ?, active_checkpoint_id = ?, "
+                "updated_at = ? WHERE id = 1",
+                (created_unix_s, checkpoint_id, int(time.time())),
             )
             connection.commit()
 
@@ -253,7 +271,8 @@ class MetadataStore:
         with self._connect() as connection:
             self._create_schema(connection)
             row = connection.execute(
-                "SELECT world_id, schema_version, request_epoch FROM worlds WHERE id = 1"
+                "SELECT world_id, schema_version, request_epoch, last_autosave_unix_s "
+                "FROM worlds WHERE id = 1"
             ).fetchone()
             if row is None:
                 raise RuntimeError("World metadata has not been initialized.")
@@ -284,6 +303,7 @@ class MetadataStore:
                 schema_version=int(row["schema_version"]),
                 request_epoch=request_epoch,
                 active_checkpoint_id=checkpoint_id,
+                last_autosave_unix_s=row["last_autosave_unix_s"],
                 clock=clock,
                 loop=loop,
             )
@@ -357,6 +377,7 @@ class MetadataStore:
             "schema_version INTEGER NOT NULL, "
             "request_epoch INTEGER NOT NULL DEFAULT 1 CHECK (request_epoch >= 1), "
             "active_checkpoint_id TEXT, "
+            "last_autosave_unix_s INTEGER, "
             "created_at INTEGER NOT NULL, "
             "updated_at INTEGER NOT NULL, "
             "clock_sim_time_seconds REAL NOT NULL CHECK (clock_sim_time_seconds >= 0), "
@@ -377,6 +398,8 @@ class MetadataStore:
                 "ALTER TABLE worlds ADD COLUMN request_epoch INTEGER NOT NULL DEFAULT 1 "
                 "CHECK (request_epoch >= 1)"
             )
+        if "last_autosave_unix_s" not in columns:
+            connection.execute("ALTER TABLE worlds ADD COLUMN last_autosave_unix_s INTEGER")
         if "sim_tick" not in columns:
             connection.execute(
                 "ALTER TABLE worlds ADD COLUMN sim_tick INTEGER NOT NULL DEFAULT 0 "
@@ -414,9 +437,19 @@ class MetadataStore:
             "world_revision INTEGER NOT NULL CHECK (world_revision >= 0), "
             "created_unix_s INTEGER NOT NULL, "
             "manifest_hash TEXT NOT NULL, "
-            "status TEXT NOT NULL CHECK (status IN ('complete'))"
+            "status TEXT NOT NULL CHECK (status IN ('complete')), "
+            "purpose TEXT NOT NULL DEFAULT 'manual' CHECK (purpose IN ('manual', 'autosave'))"
             ")"
         )
+        checkpoint_columns = {
+            str(row["name"])
+            for row in connection.execute("PRAGMA table_info(checkpoints)").fetchall()
+        }
+        if "purpose" not in checkpoint_columns:
+            connection.execute(
+                "ALTER TABLE checkpoints ADD COLUMN purpose TEXT NOT NULL DEFAULT 'manual' "
+                "CHECK (purpose IN ('manual', 'autosave'))"
+            )
         connection.execute(
             "CREATE TABLE IF NOT EXISTS snapshot_names ("
             "name TEXT PRIMARY KEY, "

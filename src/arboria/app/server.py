@@ -47,6 +47,7 @@ MAX_FAILED_LOGINS = 5
 LOGIN_WINDOW_SECONDS = 15 * 60
 MAX_STREAM_MESSAGE_BYTES = 4096
 MAX_SAVE_NAME_LENGTH = 80
+DEFAULT_AUTOSAVE_INTERVAL_SECONDS = 60
 
 
 def _repo_root() -> Path:
@@ -61,6 +62,13 @@ def _static_dir() -> Path:
     if configured:
         return Path(configured).resolve()
     return _repo_root() / "web" / "dist"
+
+
+def _autosave_interval_seconds() -> int:
+    configured = os.environ.get("ARBORIA_AUTOSAVE_INTERVAL_SECONDS")
+    if configured is None:
+        return DEFAULT_AUTOSAVE_INTERVAL_SECONDS
+    return max(0, int(configured))
 
 
 def _request_origin(request: Request) -> str:
@@ -107,6 +115,8 @@ def create_app() -> FastAPI:
     )
     static_dir = _static_dir()
     failed_logins: dict[str, list[float]] = {}
+    autosave_interval_seconds = _autosave_interval_seconds()
+    app_started_unix_s = int(time.time())
 
     def require_world_metadata() -> WorldMetadata:
         nonlocal world_metadata
@@ -175,7 +185,7 @@ def create_app() -> FastAPI:
             "base_tick_seconds": 300,
         }
 
-    def create_checkpoint_payload() -> dict[str, Any]:
+    def create_checkpoint_payload(purpose: str = "manual") -> dict[str, Any]:
         nonlocal world_metadata
         metadata = require_world_metadata()
         clock_state = clock.state()
@@ -188,6 +198,7 @@ def create_app() -> FastAPI:
             loop=loop_state,
             parent_checkpoint_id=metadata.active_checkpoint_id,
             receipt_count=metadata_store.receipt_count(),
+            purpose=purpose,
         )
         metadata_store.register_checkpoint(
             checkpoint_id=record.checkpoint_id,
@@ -197,7 +208,10 @@ def create_app() -> FastAPI:
             created_unix_s=record.created_unix_s,
             manifest_hash=record.manifest_hash,
             status=record.status,
+            purpose=record.purpose,
         )
+        if purpose == "autosave":
+            metadata_store.mark_autosave(record.checkpoint_id, record.created_unix_s)
         world_metadata = metadata_store.load()
         return {
             "checkpoint_id": record.checkpoint_id,
@@ -207,8 +221,18 @@ def create_app() -> FastAPI:
             "created_unix_s": record.created_unix_s,
             "manifest_hash": record.manifest_hash,
             "status": record.status,
+            "purpose": record.purpose,
             "manifest": manifest,
         }
+
+    def maybe_autosave() -> dict[str, Any] | None:
+        metadata = require_world_metadata()
+        now = int(time.time())
+        last = metadata.last_autosave_unix_s
+        baseline = app_started_unix_s if last is None else last
+        if now - baseline < autosave_interval_seconds:
+            return None
+        return create_checkpoint_payload("autosave")
 
     def snapshot_payloads() -> list[dict[str, Any]]:
         return [
@@ -334,6 +358,8 @@ def create_app() -> FastAPI:
         metadata = require_world_metadata()
         loop = world_loop.drain(clock.state())
         metadata_store.save_loop(loop)
+        maybe_autosave()
+        metadata = require_world_metadata()
         return JSONResponse(
             {
                 "world_id": metadata.world_id,
@@ -341,6 +367,7 @@ def create_app() -> FastAPI:
                 "schema_version": metadata.schema_version,
                 "request_epoch": metadata.request_epoch,
                 "active_checkpoint_id": metadata.active_checkpoint_id,
+                "last_autosave_unix_s": metadata.last_autosave_unix_s,
                 **loop_payload(loop),
             }
         )
@@ -356,7 +383,14 @@ def create_app() -> FastAPI:
     def list_saves(request: Request) -> Response:
         if not is_authenticated(request):
             return JSONResponse({"detail": "authentication required"}, status_code=401)
-        return JSONResponse({"snapshots": snapshot_payloads()})
+        metadata = require_world_metadata()
+        return JSONResponse(
+            {
+                "snapshots": snapshot_payloads(),
+                "last_autosave_unix_s": metadata.last_autosave_unix_s,
+                "autosave_interval_seconds": autosave_interval_seconds,
+            }
+        )
 
     @app.post("/api/v1/saves/named")
     async def create_named_save(request: Request) -> Response:
