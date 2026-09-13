@@ -40,7 +40,7 @@ Dependency: P0. This is the first playable release, not a skeleton server.
 - [x] Implement bounded command envelope, request epoch, deduplication, validation, and execution receipts. Evidence: `docs/evidence/R1-command-envelope.md`.
 - [x] Implement bounded WebSocket/server-stream baseline for authenticated world/clock snapshot and ping messages. Evidence: `docs/evidence/R1-stream-baseline.md`.
 - [x] Expose living-nursery projections through stream snapshots. Evidence: `docs/evidence/R1-living-nursery.md`.
-- [ ] Implement reconnect/resync behavior for biological projections and revisioned deltas.
+- [x] Implement reconnect/resync behavior for biological projections and revisioned deltas. Evidence: `docs/evidence/R1-stream-resync.md`.
 
 #### Time and world lifecycle
 

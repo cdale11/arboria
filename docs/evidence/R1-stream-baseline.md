@@ -15,5 +15,6 @@
 
 ## Limitations
 
-- This is a stream protocol baseline only.
-- Biological projections, revisioned deltas, reconnect replay, resync recovery, outbound subscriber queue limits, and frontend stream consumption are still unimplemented.
+- This was the initial stream protocol baseline.
+- Biological projections, revisioned deltas, and resync recovery were added later in `docs/evidence/R1-stream-resync.md`.
+- Persistent reconnect replay, outbound subscriber queue limits, detailed inspection subscriptions, and frontend stream consumption remain unimplemented.

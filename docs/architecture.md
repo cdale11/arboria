@@ -130,7 +130,7 @@ Read endpoints: `/world`, `/plants/{id}`, `/catalog`, `/shop`, `/companion`, `/s
 
 Stream messages carry `world_id`, `timeline_id`, `revision`, `base_revision`, `kind`, and payload. Deltas are applied only to matching base revisions; otherwise fetch a new snapshot. Bound each subscriber's outbound queue; drop stale deltas and request resync rather than accumulate memory. Detailed inspection subscriptions limit organ payloads.
 
-Current R1 implementation provides `/api/v1/stream` with authenticated and same-origin WebSocket upgrade checks, a bounded 4096-byte inbound message limit, an initial `snapshot` message containing world identity, timeline, request epoch, and clock status, plus `ping`/`pong`. Biological projections, revisioned deltas, reconnect replay, subscriber queues, and resync recovery are not implemented yet.
+Current R1 implementation provides `/api/v1/stream` with authenticated and same-origin WebSocket upgrade checks, a bounded 4096-byte inbound message limit, an initial `snapshot` message containing world identity, timeline, request epoch, clock, loop, and nursery projections, `ping`/`pong`, revisioned `delta` frames when ping-driven ticking advances biology, and `sync` requests with `base_revision`. If the client is current, `sync` returns `synced`; if the client is stale, it returns a full authoritative `snapshot` with `base_revision: 0` because R1 delta history is ephemeral. Persistent reconnect replay, outbound subscriber queue limits, detailed inspection subscriptions, and frontend stream consumption are not implemented yet.
 
 ## 6. Authentication and single-instance operation
 

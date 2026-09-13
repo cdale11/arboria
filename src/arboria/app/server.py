@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import time
@@ -824,21 +825,72 @@ def create_app() -> FastAPI:
         await websocket.accept()
         metadata = require_world_metadata()
         loop = tick_world()
-        await websocket.send_json(
-            {
+
+        def stream_frame(kind: str, payload: dict[str, Any], base_revision: int) -> dict[str, Any]:
+            return {
                 "schema_version": 1,
                 "world_id": metadata.world_id,
                 "timeline_id": metadata.timeline_id,
                 "revision": loop.world_revision,
-                "base_revision": loop.world_revision,
-                "kind": "snapshot",
-                "payload": {
-                    "request_epoch": metadata.request_epoch,
-                    "clock": save_clock_status(),
-                    "loop": loop_payload(world_loop.state()),
-                    "nursery": nursery_payload(),
-                },
+                "base_revision": base_revision,
+                "kind": kind,
+                "payload": payload,
             }
+
+        def projection_payload() -> dict[str, Any]:
+            return {
+                "request_epoch": metadata.request_epoch,
+                "clock": save_clock_status(),
+                "loop": loop_payload(world_loop.state()),
+                "nursery": nursery_payload(),
+            }
+
+        def parse_sync_base_revision(message: str) -> int | None:
+            try:
+                payload = json.loads(message)
+            except (ValueError, TypeError):
+                return None
+            if not isinstance(payload, dict) or payload.get("kind") != "sync":
+                return None
+            base = payload.get("base_revision")
+            if isinstance(base, bool) or not isinstance(base, int):
+                return None
+            return base
+
+        def parse_stream_kind(message: str) -> str | None:
+            try:
+                payload = json.loads(message)
+            except (ValueError, TypeError):
+                return None
+            if not isinstance(payload, dict):
+                return None
+            kind = payload.get("kind")
+            return kind if isinstance(kind, str) else None
+
+        def sync_reply(base_revision: int | None) -> dict[str, Any]:
+            revision = loop.world_revision
+            if base_revision is None or base_revision >= revision:
+                return stream_frame(
+                    "synced", {"request_epoch": metadata.request_epoch}, revision
+                )
+            # Delta history is intentionally ephemeral in R1. A stale client gets
+            # an authoritative full projection to replace local state.
+            return {
+                "schema_version": 1,
+                "world_id": metadata.world_id,
+                "timeline_id": metadata.timeline_id,
+                "revision": revision,
+                "base_revision": 0,
+                "kind": "snapshot",
+                "payload": projection_payload(),
+            }
+
+        await websocket.send_json(
+            stream_frame(
+                "snapshot",
+                projection_payload(),
+                loop.world_revision,
+            )
         )
         try:
             while True:
@@ -846,19 +898,25 @@ def create_app() -> FastAPI:
                 if len(message.encode("utf-8")) > MAX_STREAM_MESSAGE_BYTES:
                     await websocket.close(code=status.WS_1009_MESSAGE_TOO_BIG)
                     return
-                if message == '{"kind":"ping"}':
+                message_kind = parse_stream_kind(message)
+                if message_kind == "ping":
+                    previous_revision = loop.world_revision
                     loop = tick_world()
+                    if loop.world_revision > previous_revision:
+                        await websocket.send_json(
+                            stream_frame(
+                                "delta",
+                                projection_payload(),
+                                previous_revision,
+                            )
+                        )
                     await websocket.send_json(
-                        {
-                            "schema_version": 1,
-                            "world_id": metadata.world_id,
-                            "timeline_id": metadata.timeline_id,
-                            "revision": loop.world_revision,
-                            "base_revision": loop.world_revision,
-                            "kind": "pong",
-                            "payload": {},
-                        }
+                        stream_frame("pong", {}, loop.world_revision)
                     )
+                elif message_kind == "sync":
+                    loop = tick_world()
+                    requested = parse_sync_base_revision(message)
+                    await websocket.send_json(sync_reply(requested))
                 else:
                     await websocket.close(code=status.WS_1003_UNSUPPORTED_DATA)
                     return

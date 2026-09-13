@@ -1,3 +1,4 @@
+import time
 from pathlib import Path
 from typing import cast
 from uuid import uuid4
@@ -615,6 +616,66 @@ def test_stream_sends_snapshot_and_pong(monkeypatch: MonkeyPatch, tmp_path: Path
     assert snapshot["payload"]["request_epoch"] == world["request_epoch"]
     assert snapshot["payload"]["clock"]["speed"] == 48.0
     assert pong["kind"] == "pong"
+
+
+def test_stream_sync_replies_synced_for_current_revision(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    with TestClient(create_app()) as client:
+        login(client)
+        with client.websocket_connect("/api/v1/stream") as websocket:
+            snapshot = websocket.receive_json()
+            websocket.send_json(
+                {"kind": "sync", "base_revision": snapshot["revision"]}
+            )
+            synced = websocket.receive_json()
+
+    assert synced["kind"] == "synced"
+    assert synced["revision"] == snapshot["revision"]
+    assert synced["base_revision"] == snapshot["revision"]
+
+
+def test_stream_sync_replaces_stale_revision_with_snapshot(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    with TestClient(create_app()) as client:
+        login(client)
+        with client.websocket_connect("/api/v1/stream") as websocket:
+            snapshot = websocket.receive_json()
+            websocket.send_json({"kind": "sync", "base_revision": -1})
+            replacement = websocket.receive_json()
+
+    assert replacement["kind"] == "snapshot"
+    assert replacement["base_revision"] == 0
+    assert replacement["revision"] == snapshot["revision"]
+    assert replacement["payload"]["nursery"]["plant_count"] == 2
+
+
+def test_stream_ping_emits_delta_when_biology_advances(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    with TestClient(create_app()) as client:
+        csrf = login(client)
+        speed = client.post(
+            "/api/v1/clock/speed", json={"speed": 144.0}, headers={CSRF_HEADER_NAME: csrf}
+        )
+        assert speed.status_code == 200
+        with client.websocket_connect("/api/v1/stream") as websocket:
+            snapshot = websocket.receive_json()
+            time.sleep(2.2)
+            websocket.send_json({"kind": "ping"})
+            delta = websocket.receive_json()
+            pong = websocket.receive_json()
+
+    assert delta["kind"] == "delta"
+    assert delta["base_revision"] == snapshot["revision"]
+    assert delta["revision"] > snapshot["revision"]
+    assert delta["payload"]["nursery"]["plant_count"] == 2
+    assert pong["kind"] == "pong"
+    assert pong["revision"] == delta["revision"]
 
 
 def test_stream_rejects_oversized_client_message(

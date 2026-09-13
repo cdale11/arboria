@@ -2,6 +2,28 @@
 
 Records delivered work and actual evidence. Planned features belong in [ROADMAP.md](ROADMAP.md), not in claims of implemented behavior.
 
+## 2026-09-14 — R1 stream resync and revisioned deltas
+
+### Added
+
+- Added JSON-parsed stream `sync {base_revision}` handling with current-state `synced` responses and stale-state authoritative replacement snapshots.
+- Added revisioned `delta` frames for ping-driven biological advancement; deltas include clock/loop/nursery projections and `base_revision` from the prior revision.
+- Updated stream architecture and baseline evidence to distinguish implemented ephemeral full-projection deltas from unimplemented persistent replay.
+
+### Evidence and verification
+
+- `python -m pytest tests/unit/app/test_server.py` passed with 38 tests.
+- `python -m pytest tests/unit` passed with 141 tests.
+- `ruff check .` passed.
+- `mypy src tests/unit` passed.
+- `npm --prefix web run check` passed.
+- `npm --prefix web run test` passed with 16 tests.
+- `npm --prefix web run build` passed.
+
+### Limitations
+
+- R1 stream deltas are ephemeral full-projection deltas; no persistent replay log, outbound subscriber queue implementation, detailed inspection subscription, or frontend WebSocket consumer exists yet.
+
 ## 2026-09-14 — R1 crash recovery, migration, and atomic saves
 
 ### Added
