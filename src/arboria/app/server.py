@@ -26,6 +26,13 @@ from .auth import (
     session_is_valid,
     verify_password,
 )
+from .commands import (
+    CommandEnvelope,
+    CommandService,
+    CommandValidationError,
+    Receipt,
+    parse_envelope,
+)
 from .metadata import MetadataStore, WorldMetadata
 from .process_lock import DataDirectoryLock
 
@@ -93,6 +100,45 @@ def create_app() -> FastAPI:
         if world_metadata is None:
             world_metadata = metadata_store.initialize_for_process_start()
         return world_metadata
+
+    def receipt_payload(receipt: Receipt) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "command_id": receipt.command_id,
+            "actor": receipt.actor,
+            "kind": receipt.kind,
+            "status": receipt.status,
+            "created_unix_s": receipt.created_unix_s,
+        }
+        if receipt.reason is not None:
+            payload["reason"] = receipt.reason
+        if receipt.result is not None:
+            payload["result"] = receipt.result
+        return payload
+
+    def apply_command(envelope: CommandEnvelope) -> dict[str, Any]:
+        if envelope.kind == "clock.pause":
+            if envelope.payload:
+                raise CommandValidationError("clock.pause payload must be empty")
+            payload = clock_status_payload(clock.pause())
+            metadata_store.save_clock(clock.state())
+            return {"clock": payload}
+        if envelope.kind == "clock.resume":
+            if envelope.payload:
+                raise CommandValidationError("clock.resume payload must be empty")
+            payload = clock_status_payload(clock.resume())
+            metadata_store.save_clock(clock.state())
+            return {"clock": payload}
+        if envelope.kind == "clock.set_speed":
+            if set(envelope.payload) != {"speed"}:
+                raise CommandValidationError("clock.set_speed requires only speed")
+            try:
+                speed = float(envelope.payload["speed"])
+                status = clock.set_speed(speed)
+            except (TypeError, ValueError, ClockValidationError) as exc:
+                raise CommandValidationError(str(exc)) from exc
+            metadata_store.save_clock(clock.state())
+            return {"clock": clock_status_payload(status)}
+        raise CommandValidationError("unknown command kind")
 
     def save_clock_status() -> dict[str, float | int | bool]:
         require_world_metadata()
@@ -196,8 +242,29 @@ def create_app() -> FastAPI:
                 "world_id": metadata.world_id,
                 "timeline_id": metadata.timeline_id,
                 "schema_version": metadata.schema_version,
+                "request_epoch": metadata.request_epoch,
             }
         )
+
+    @app.post("/api/v1/commands")
+    async def submit_command(request: Request) -> Response:
+        rejection = require_auth_and_csrf(request)
+        if rejection is not None:
+            return rejection
+        try:
+            envelope = parse_envelope(await request.json())
+        except CommandValidationError as exc:
+            return JSONResponse({"detail": str(exc)}, status_code=400)
+        metadata = require_world_metadata()
+        service = CommandService(
+            world_id=metadata.world_id,
+            timeline_id=metadata.timeline_id,
+            request_epoch=metadata.request_epoch,
+            save_receipt=metadata_store.save_receipt,
+            find_receipt=metadata_store.find_receipt,
+        )
+        receipt = service.submit(envelope, apply_command)
+        return JSONResponse(receipt_payload(receipt))
 
     def require_auth_and_csrf(request: Request) -> JSONResponse | None:
         if not is_authenticated(request):

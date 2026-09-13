@@ -35,7 +35,7 @@ Dependency: P0. This is the first playable release, not a skeleton server.
 - [x] Implement CSRF tokens, same-origin unsafe-request checks, and baseline failed-login throttling. Evidence: `docs/evidence/R1-auth-hardening.md`.
 - [x] Implement baseline data-directory process lock preventing two local server owners. Evidence: `docs/evidence/R1-process-lock.md`.
 - [x] Implement authenticated single-world ownership metadata. Evidence: `docs/evidence/R1-world-metadata.md`.
-- [ ] Implement bounded command envelope, request epoch, deduplication, validation, and execution receipts.
+- [x] Implement bounded command envelope, request epoch, deduplication, validation, and execution receipts. Evidence: `docs/evidence/R1-command-envelope.md`.
 - [ ] Implement bounded WebSocket/server-stream projection protocol and reconnect/resync behavior.
 
 #### Time and world lifecycle

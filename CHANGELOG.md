@@ -227,3 +227,25 @@ Records delivered work and actual evidence. Planned features belong in [ROADMAP.
 ### Limitations
 
 - Metadata persistence only: immutable checkpoints, autosave, named saves, restore, export/import, command receipts, migrations, biological state, and the world tick loop remain unimplemented.
+
+## 2026-09-13 — R1 command-envelope baseline
+
+### Added
+
+- Added bounded command envelope parsing and validation for schema version, UUIDs, request epoch, kind, payload size/depth/type, and nonfinite numbers.
+- Added persisted command receipts in SQLite, keyed by timeline, request epoch, and command ID, with duplicate submissions returning the original receipt.
+- Added request epoch metadata that increments on process restart.
+- Added authenticated, CSRF-protected `/api/v1/commands` endpoint.
+- Routed existing clock pause/resume/set-speed actions through the command endpoint as the first real command handlers.
+- Added tests for envelope rejection, receipt persistence, deduplication, stale epoch rejection, and clock-command application.
+- Updated README, roadmap, architecture notes, and evidence documentation.
+
+### Evidence and verification
+
+- `python -m pytest tests/unit/app/test_commands.py tests/unit/app/test_metadata.py tests/unit/app/test_server.py` passed with 22 tests and the documented FastAPI/Starlette `TestClient` deprecation warning.
+- `ruff check src/arboria/app/commands.py src/arboria/app/metadata.py src/arboria/app/server.py tests/unit/app/test_commands.py tests/unit/app/test_metadata.py tests/unit/app/test_server.py` passed.
+- `mypy src tests/unit` passed.
+
+### Limitations
+
+- Command baseline only: no horticultural command kinds, biological tick queue, WebSocket notifications, receipt expiry policy, checkpoint reconciliation, or save/restore behavior exists yet.

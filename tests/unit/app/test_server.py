@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import cast
+from uuid import uuid4
 
 from fastapi.testclient import TestClient
 from pytest import MonkeyPatch
@@ -217,5 +218,75 @@ def test_world_metadata_and_clock_survive_restart(
     assert restarted_world["world_id"] == world["world_id"]
     assert restarted_world["timeline_id"] != world["timeline_id"]
     assert restarted_world["schema_version"] == 1
+    assert restarted_world["request_epoch"] == world["request_epoch"] + 1
     assert restarted_clock["paused"] is True
     assert restarted_clock["speed"] == 12.0
+
+
+def command(world: dict[str, object], kind: str, payload: dict[str, object]) -> dict[str, object]:
+    return {
+        "schema_version": 1,
+        "command_id": str(uuid4()),
+        "world_id": world["world_id"],
+        "timeline_id": world["timeline_id"],
+        "request_epoch": world["request_epoch"],
+        "kind": kind,
+        "payload": payload,
+    }
+
+
+def test_command_endpoint_applies_clock_command_and_deduplicates_receipt(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    with TestClient(create_app()) as client:
+        csrf = login(client)
+        world = client.get("/api/v1/world").json()
+        envelope = command(world, "clock.set_speed", {"speed": 12.0})
+
+        first = client.post(
+            "/api/v1/commands", json=envelope, headers={CSRF_HEADER_NAME: csrf}
+        )
+        second = client.post(
+            "/api/v1/commands", json=envelope, headers={CSRF_HEADER_NAME: csrf}
+        )
+
+    assert first.status_code == 200
+    assert first.json()["status"] == "applied"
+    assert first.json()["result"]["clock"]["speed"] == 12.0
+    assert second.json() == first.json()
+
+
+def test_command_endpoint_rejects_epoch_mismatch_with_receipt(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    with TestClient(create_app()) as client:
+        csrf = login(client)
+        world = client.get("/api/v1/world").json()
+        envelope = command(world, "clock.pause", {})
+        envelope["request_epoch"] = 999
+
+        response = client.post(
+            "/api/v1/commands", json=envelope, headers={CSRF_HEADER_NAME: csrf}
+        )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "rejected"
+    assert response.json()["reason"] == "request epoch expired"
+
+
+def test_command_endpoint_rejects_invalid_envelope_without_receipt(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    with TestClient(create_app()) as client:
+        csrf = login(client)
+
+        response = client.post(
+            "/api/v1/commands",
+            json={"schema_version": 1, "extra": True},
+            headers={CSRF_HEADER_NAME: csrf},
+        )
+
+    assert response.status_code == 400
