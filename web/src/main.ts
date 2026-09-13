@@ -72,56 +72,107 @@ export function formatPlantSummary(plant: PlantSummary): string {
 
 export function renderNurseryScene(plants: PlantSummary[]): SVGSVGElement {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.setAttribute("viewBox", "0 0 360 180");
+  svg.setAttribute("viewBox", "0 0 420 260");
   svg.setAttribute("role", "img");
-  svg.setAttribute("aria-label", "Generated nursery view");
+  svg.setAttribute("aria-label", "Generated 2.5D nursery view");
   svg.dataset.action = "nursery-scene";
 
-  const ground = document.createElementNS(svg.namespaceURI, "rect");
-  ground.setAttribute("x", "0");
-  ground.setAttribute("y", "128");
-  ground.setAttribute("width", "360");
-  ground.setAttribute("height", "52");
-  ground.setAttribute("fill", "#8f6f45");
-  svg.append(ground);
+  const floor = document.createElementNS(svg.namespaceURI, "polygon");
+  floor.setAttribute("points", "210,38 386,126 210,226 34,126");
+  floor.setAttribute("fill", "#d8c49a");
+  floor.setAttribute("stroke", "#9d8051");
+  floor.setAttribute("stroke-width", "2");
+  floor.setAttribute("data-action", "nursery-floor");
+  svg.append(floor);
+
+  for (const y of [96, 126, 156]) {
+    const shelf = document.createElementNS(svg.namespaceURI, "polyline");
+    shelf.setAttribute("points", `${84},${y} 210,${y - 60} 336,${y}`);
+    shelf.setAttribute("fill", "none");
+    shelf.setAttribute("stroke", "#b5925e");
+    shelf.setAttribute("stroke-width", "1.5");
+    shelf.setAttribute("opacity", "0.6");
+    svg.append(shelf);
+  }
 
   const ordered = [...plants].sort((left, right) => left.plant_id - right.plant_id);
   for (const [index, plant] of ordered.entries()) {
-    const x = 36 + (index % 6) * 54;
-    const row = Math.floor(index / 6);
-    const baseY = 136 + Math.min(row, 1) * 14;
-    const height = Math.max(18, Math.min(86, plant.stem_length_m * 260));
-    const canopy = Math.max(10, Math.min(34, plant.leaf_area_m2 * 360));
+    const column = index % 4;
+    const row = Math.floor(index / 4);
+    const isoX = 116 + column * 48 - Math.min(row, 3) * 28;
+    const isoY = 130 + column * 18 + Math.min(row, 3) * 24;
+    const height = Math.max(24, Math.min(92, plant.stem_length_m * 280));
+    const canopy = Math.max(12, Math.min(36, plant.leaf_area_m2 * 380));
     const stress = Math.min(1, plant.water_stress_factor, plant.nutrient_stress_factor);
     const leafColor = plant.alive
       ? `rgb(${Math.round(80 + (1 - stress) * 100)}, ${Math.round(120 + stress * 90)}, 70)`
       : "#6f6759";
 
+    const group = document.createElementNS(svg.namespaceURI, "g");
+    group.setAttribute("data-plant-id", String(plant.plant_id));
+    group.setAttribute("opacity", plant.alive ? "1" : "0.7");
+
+    const shadow = document.createElementNS(svg.namespaceURI, "ellipse");
+    shadow.setAttribute("cx", String(isoX + 10));
+    shadow.setAttribute("cy", String(isoY + 12));
+    shadow.setAttribute("rx", "28");
+    shadow.setAttribute("ry", "9");
+    shadow.setAttribute("fill", "#4b3a28");
+    shadow.setAttribute("opacity", "0.22");
+    group.append(shadow);
+
+    const potSide = document.createElementNS(svg.namespaceURI, "path");
+    potSide.setAttribute(
+      "d",
+      `M ${isoX - 20} ${isoY} Q ${isoX} ${isoY + 11} ${isoX + 20} ${isoY} L ${isoX + 15} ${isoY + 28} Q ${isoX} ${isoY + 38} ${isoX - 15} ${isoY + 28} Z`,
+    );
+    potSide.setAttribute("fill", plant.protected ? "#7b9aca" : "#b2663b");
+    potSide.setAttribute("stroke", "#6d432b");
+    potSide.setAttribute("stroke-width", "1.5");
+    group.append(potSide);
+
+    const potRim = document.createElementNS(svg.namespaceURI, "ellipse");
+    potRim.setAttribute("cx", String(isoX));
+    potRim.setAttribute("cy", String(isoY));
+    potRim.setAttribute("rx", "22");
+    potRim.setAttribute("ry", "9");
+    potRim.setAttribute("fill", "#6b4b2f");
+    potRim.setAttribute("stroke", "#4c3522");
+    potRim.setAttribute("data-plant-id", String(plant.plant_id));
+    group.append(potRim);
+
     const stem = document.createElementNS(
       "http://www.w3.org/2000/svg",
       "line",
     ) as SVGLineElement;
-    stem.setAttribute("x1", String(x));
-    stem.setAttribute("y1", String(baseY));
-    stem.setAttribute("x2", String(x));
-    stem.setAttribute("y2", String(baseY - height));
+    stem.setAttribute("x1", String(isoX));
+    stem.setAttribute("y1", String(isoY - 4));
+    stem.setAttribute("x2", String(isoX + 8));
+    stem.setAttribute("y2", String(isoY - height));
     stem.setAttribute("stroke", plant.protected ? "#2f5d9f" : "#5b3a24");
     stem.setAttribute("stroke-width", plant.protected ? "5" : "3");
     stem.dataset.plantId = String(plant.plant_id);
-    svg.append(stem);
+    group.append(stem);
 
-    const leaves = document.createElementNS(
-      "http://www.w3.org/2000/svg",
-      "ellipse",
-    ) as SVGEllipseElement;
-    leaves.setAttribute("cx", String(x));
-    leaves.setAttribute("cy", String(baseY - height));
-    leaves.setAttribute("rx", String(canopy));
-    leaves.setAttribute("ry", String(Math.max(7, canopy * 0.65)));
-    leaves.setAttribute("fill", leafColor);
-    leaves.setAttribute("opacity", plant.alive ? "0.95" : "0.65");
-    leaves.dataset.plantId = String(plant.plant_id);
-    svg.append(leaves);
+    for (const [dx, dy, scale] of [[-8, 0, 0.78], [11, 2, 0.72], [2, -9, 1]] as const) {
+      const leaves = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "ellipse",
+      ) as SVGEllipseElement;
+      leaves.setAttribute("cx", String(isoX + 8 + dx));
+      leaves.setAttribute("cy", String(isoY - height + dy));
+      leaves.setAttribute("rx", String(canopy * scale));
+      leaves.setAttribute("ry", String(Math.max(7, canopy * 0.44 * scale)));
+      leaves.setAttribute("fill", leafColor);
+      leaves.setAttribute("stroke", plant.alive ? "#466b31" : "#5f584c");
+      leaves.setAttribute("stroke-width", "1");
+      leaves.setAttribute("opacity", plant.alive ? "0.94" : "0.65");
+      leaves.setAttribute("transform", `rotate(${-18 + dx}, ${isoX + 8 + dx}, ${isoY - height + dy})`);
+      leaves.dataset.plantId = String(plant.plant_id);
+      group.append(leaves);
+    }
+
+    svg.append(group);
   }
 
   return svg;

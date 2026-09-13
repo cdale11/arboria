@@ -2,6 +2,20 @@
 
 Records delivered work and actual evidence. Planned features belong in [ROADMAP.md](ROADMAP.md), not in claims of implemented behavior.
 
+## 2026-09-14 — Isometric 2.5D nursery scene
+
+### Changed
+
+- Reworked the generated nursery SVG from a flat side-view into a clearer 2.5D isometric composition with a diamond floor, row guides, depth-positioned pots, shadows, tilted stems, and layered canopy ellipses.
+- Kept the scene display-only: all sizes, stress colors, death opacity, and protection styling still come from server plant projections, and gameplay does not read rendering state.
+
+### Evidence and verification
+
+- `npm --prefix web run check`
+- `npm --prefix web run test`: 21 passed.
+- `npm --prefix web run test:e2e`: 1 passed.
+- `npm --prefix web run build`
+
 ## 2026-09-14 — Live 2.5D nursery scene wiring
 
 ### Fixed

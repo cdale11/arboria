@@ -86,7 +86,9 @@ describe("dependency baseline app", () => {
     const scene = renderNurseryScene(stubApiData().plants);
 
     expect(scene.getAttribute("role")).toBe("img");
-    expect(scene.querySelectorAll("ellipse[data-plant-id]")).toHaveLength(1);
+    expect(scene.getAttribute("aria-label")).toContain("2.5D");
+    expect(scene.querySelector('[data-action="nursery-floor"]')).not.toBeNull();
+    expect(scene.querySelectorAll("ellipse[data-plant-id]").length).toBeGreaterThan(1);
     expect(scene.querySelector('line[data-plant-id="1"]')).not.toBeNull();
   });
 
@@ -318,7 +320,8 @@ describe("nursery controls", () => {
     const scene = target.querySelector('[data-action="nursery-scene"]');
 
     expect(scene).not.toBeNull();
-    expect(scene?.querySelectorAll("ellipse[data-plant-id]")).toHaveLength(1);
+    expect(scene?.querySelector('[data-action="nursery-floor"]')).not.toBeNull();
+    expect(scene?.querySelectorAll("ellipse[data-plant-id]").length).toBeGreaterThan(1);
   });
 
   it("reads the CSRF token from cookies", () => {
