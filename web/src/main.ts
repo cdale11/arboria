@@ -752,11 +752,13 @@ export function renderControlPanel(
   panel.replaceChildren();
 
   const care = document.createElement("section");
+  care.className = "control-section care-section";
   const careHeading = document.createElement("h2");
   careHeading.textContent = "Care";
   care.append(careHeading);
   for (const plant of context.plants) {
     const row = document.createElement("p");
+    row.className = "plant-card";
     row.textContent = formatPlantSummary(plant) + " ";
     row.append(
       actionButton("Inspect", "inspect", () => callbacks.onInspect(plant.plant_id), {
@@ -815,6 +817,7 @@ export function renderControlPanel(
   panel.append(care);
 
   const shop = document.createElement("section");
+  shop.className = "control-section";
   const shopHeading = document.createElement("h2");
   shopHeading.textContent = "Shop";
   shop.append(shopHeading);
@@ -834,6 +837,7 @@ export function renderControlPanel(
   panel.append(shop);
 
   const clock = document.createElement("section");
+  clock.className = "control-section";
   const clockHeading = document.createElement("h2");
   clockHeading.textContent = "Clock";
   clock.append(clockHeading);
@@ -859,6 +863,7 @@ export function renderControlPanel(
   panel.append(clock);
 
   const saves = document.createElement("section");
+  saves.className = "control-section saves-section";
   const savesHeading = document.createElement("h2");
   savesHeading.textContent = "Saves";
   saves.append(savesHeading);
@@ -924,6 +929,10 @@ export async function mountNurseryApp(
   status.textContent = "Loading nursery...";
   const scene = document.createElement("div");
   scene.dataset.action = "nursery-scene-slot";
+  scene.className = "scene-frame";
+  const sceneTitle = document.createElement("h2");
+  sceneTitle.textContent = "Living nursery";
+  scene.append(sceneTitle);
   const panel = document.createElement("div");
   target.append(heading, status, scene, panel);
 
@@ -942,7 +951,7 @@ export async function mountNurseryApp(
         `Cash ${api.world.nursery.cash_minor} minor units, ` +
         `reservoir ${api.world.nursery.reservoir_kg.toFixed(3)} kg.`;
       status.textContent = lines;
-      scene.replaceChildren(renderNurseryScene(api.plants));
+      scene.replaceChildren(sceneTitle, renderNurseryScene(api.plants));
       const callbacks: ControlCallbacks = {
         onInspect: (plantId) => void inspectPlant(plantId),
         onWater: (plantId) => void runCommand("nursery.water", {

@@ -380,6 +380,7 @@ def advance_nursery(
     drainage = 0.0
     npk_uptake = [0.0, 0.0, 0.0]
     for _ in range(ticks):
+        indices_by_plant = _organ_indices_by_plant(current)
         params_by_plant: dict[int, SpeciesRecord] = {}
         stress_by_plant: dict[int, float] = {}
         for plant_id in sorted({organ.plant_id for organ in current}):
@@ -408,7 +409,11 @@ def advance_nursery(
             transpired += water.transpiration_kg
             drainage += water.drainage_kg
             current = _apply_zone_exchange(
-                current, plant_id, water.root_uptake_kg, water.transpiration_kg
+                current,
+                plant_id,
+                water.root_uptake_kg,
+                water.transpiration_kg,
+                indices_by_plant[plant_id],
             )
             live_root = next(
                 organ
@@ -433,6 +438,7 @@ def advance_nursery(
                 nutrients.root_nitrogen_kg,
                 nutrients.root_phosphorus_kg,
                 nutrients.root_potassium_kg,
+                indices_by_plant[plant_id],
             )
             plant_organs = [organ for organ in current if organ.plant_id == plant_id]
             assimilated = assimilate_carbon(
@@ -464,7 +470,11 @@ def advance_nursery(
             current = grown.organs
         for plant_id, combined in stress_by_plant.items():
             current = _apply_stress_damage(
-                current, plant_id, combined, params_by_plant[plant_id].nutrients
+                current,
+                plant_id,
+                combined,
+                params_by_plant[plant_id].nutrients,
+                indices_by_plant[plant_id],
             )
     validate_topology(current)
     validate_zones(current, current_zones)
@@ -702,14 +712,12 @@ def _apply_nutrient_uptake(
     nitrogen_kg: float,
     phosphorus_kg: float,
     potassium_kg: float,
+    indices: list[int],
 ) -> list[Organ]:
-    next_organs: list[Organ] = []
-    for organ in organs:
-        if organ.plant_id != plant_id or organ.parent_id is not None:
-            next_organs.append(organ)
-            continue
-        next_organs.append(
-            replace(
+    for index in indices:
+        organ = organs[index]
+        if organ.parent_id is None:
+            organs[index] = replace(
                 organ,
                 pools=replace(
                     organ.pools,
@@ -718,8 +726,8 @@ def _apply_nutrient_uptake(
                     potassium_kg=potassium_kg,
                 ),
             )
-        )
-    return next_organs
+            break
+    return organs
 
 
 def _apply_stress_damage(
@@ -727,11 +735,11 @@ def _apply_stress_damage(
     plant_id: int,
     combined_stress: float,
     parameters: NutrientParameters,
+    indices: list[int],
 ) -> list[Organ]:
-    next_organs: list[Organ] = []
-    for organ in organs:
-        if organ.plant_id != plant_id or not organ.alive:
-            next_organs.append(organ)
+    for index in indices:
+        organ = organs[index]
+        if not organ.alive:
             continue
         damage = advance_stress_damage(
             damage_fraction=organ.damage_fraction,
@@ -740,25 +748,28 @@ def _apply_stress_damage(
             dt_seconds=BASE_TICK_SECONDS,
             parameters=parameters,
         )
-        next_organs.append(
+        organs[index] = (
             replace(organ, damage_fraction=damage.damage_fraction, alive=damage.alive)
         )
-    return next_organs
+    return organs
 
 
 def _apply_zone_exchange(
-    organs: list[Organ], plant_id: int, uptake_kg: float, transpiration_kg: float
+    organs: list[Organ],
+    plant_id: int,
+    uptake_kg: float,
+    transpiration_kg: float,
+    indices: list[int],
 ) -> list[Organ]:
-    next_organs: list[Organ] = []
     transpiration_left = transpiration_kg
-    for organ in organs:
-        if organ.plant_id != plant_id or organ.parent_id is not None:
-            next_organs.append(organ)
+    for index in indices:
+        organ = organs[index]
+        if organ.parent_id is not None:
             continue
         root_water = organ.pools.water_kg + uptake_kg
         root_take = min(root_water, transpiration_left)
         transpiration_left -= root_take
-        next_organs.append(
+        organs[index] = (
             replace(
                 organ,
                 pools=replace(
@@ -766,9 +777,17 @@ def _apply_zone_exchange(
                 ),
             )
         )
+        break
     if transpiration_left > 1e-12:
         raise ValueError("transpiration exceeds available plant water")
-    return next_organs
+    return organs
+
+
+def _organ_indices_by_plant(organs: list[Organ]) -> dict[int, list[int]]:
+    indices: dict[int, list[int]] = {}
+    for index, organ in enumerate(organs):
+        indices.setdefault(organ.plant_id, []).append(index)
+    return indices
 
 
 def organs_to_payload(organs: list[Organ]) -> list[dict[str, object]]:

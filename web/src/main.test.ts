@@ -322,6 +322,8 @@ describe("nursery controls", () => {
     expect(scene).not.toBeNull();
     expect(scene?.querySelector('[data-action="nursery-floor"]')).not.toBeNull();
     expect(scene?.querySelectorAll("ellipse[data-plant-id]").length).toBeGreaterThan(1);
+    expect(target.querySelector(".scene-frame h2")?.textContent).toBe("Living nursery");
+    expect(target.querySelectorAll(".plant-card")).toHaveLength(1);
   });
 
   it("reads the CSRF token from cookies", () => {

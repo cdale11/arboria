@@ -11,14 +11,27 @@
 
       body {
         margin: 0;
-        font-family: system-ui, sans-serif;
+        color: #243126;
+        font-family: ui-rounded, "Avenir Next", system-ui, sans-serif;
         line-height: 1.45;
+        background: #f4efe4;
       }
 
       main {
         max-width: 72rem;
         margin: 0 auto;
         padding: 1rem;
+      }
+
+      h1 {
+        margin-bottom: 0.25rem;
+        color: #193d2a;
+        letter-spacing: -0.03em;
+      }
+
+      h2 {
+        margin-top: 0;
+        color: #315d43;
       }
 
       button,
@@ -50,6 +63,63 @@
         background: linear-gradient(#d9edf5, #f7f1dc 72%, #b18a55 72%);
       }
 
+      [data-action="status"] {
+        padding: 0.8rem 1rem;
+        border: 1px solid #d8ccb9;
+        border-radius: 0.75rem;
+        background: #fffaf1;
+        box-shadow: 0 0.25rem 1rem rgb(68 52 31 / 8%);
+      }
+
+      .scene-frame {
+        margin: 1.25rem 0;
+        padding: 1rem;
+        border: 1px solid #d8ccb9;
+        border-radius: 1rem;
+        background: #fffaf1;
+        box-shadow: 0 0.5rem 1.5rem rgb(68 52 31 / 10%);
+      }
+
+      .scene-frame h2 {
+        margin-bottom: 0.5rem;
+      }
+
+      .control-section {
+        margin: 1rem 0;
+        padding: 1rem;
+        border: 1px solid #ded3c2;
+        border-radius: 0.85rem;
+        background: rgb(255 250 241 / 78%);
+      }
+
+      .care-section {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
+        gap: 0.75rem;
+      }
+
+      .care-section h2 {
+        grid-column: 1 / -1;
+        margin-bottom: 0;
+      }
+
+      .plant-card {
+        margin: 0;
+        padding: 0.75rem;
+        border: 1px solid #e2d6c4;
+        border-radius: 0.7rem;
+        background: #fff;
+      }
+
+      .plant-card button {
+        margin-top: 0.35rem;
+      }
+
+      .saves-section textarea {
+        width: min(100%, 42rem);
+        vertical-align: top;
+      }
+
       @media (max-width: 420px) {
         main {
           padding: 0.75rem;
@@ -60,6 +130,10 @@
         select,
         textarea {
           width: 100%;
+        }
+
+        .care-section {
+          grid-template-columns: 1fr;
         }
       }
     </style>

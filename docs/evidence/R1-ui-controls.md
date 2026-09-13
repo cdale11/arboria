@@ -21,7 +21,9 @@
 - Save controls include current-domain export/import archive actions backed by
   `/api/v1/saves/export` and `/api/v1/saves/import`.
 - `web/index.html` sets responsive viewport/layout CSS and 44 CSS-pixel
-  minimum heights on controls for the 360px touch-layout contract.
+  minimum heights on controls for the 360px touch-layout contract. The live
+  nursery is presented in a framed scene with responsive plant cards and
+  grouped care/shop/clock/save sections.
 - `web/package.json` makes `npm --prefix web run test:e2e` a real locked
   Vitest/jsdom full-flow check instead of a placeholder failure.
 
