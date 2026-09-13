@@ -61,3 +61,18 @@ def test_checkpoint_reader_rejects_corrupt_state(tmp_path: Path) -> None:
         raise AssertionError("corrupt checkpoint should be rejected")
     except ValueError as exc:
         assert "mismatch" in str(exc)
+
+
+def test_checkpoint_cleanup_removes_only_interrupted_generations(tmp_path: Path) -> None:
+    writer = CheckpointWriter(tmp_path)
+    complete = tmp_path / "checkpoints" / "complete"
+    interrupted = tmp_path / "checkpoints" / ".abc.tmp"
+    complete.mkdir(parents=True)
+    interrupted.mkdir()
+    (interrupted / "state.json").write_text("{}", encoding="utf-8")
+
+    removed = writer.cleanup_interrupted_generations()
+
+    assert removed == 1
+    assert complete.is_dir()
+    assert not interrupted.exists()

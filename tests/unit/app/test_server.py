@@ -279,6 +279,20 @@ def test_manual_checkpoint_creates_manifest_and_updates_world(
     assert world["active_checkpoint_id"] == checkpoint_id
 
 
+def test_startup_removes_interrupted_checkpoint_generation(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    interrupted = tmp_path / "checkpoints" / ".crash.tmp"
+    interrupted.mkdir(parents=True)
+    (interrupted / "manifest.json").write_text("{}", encoding="utf-8")
+
+    with TestClient(create_app()) as client:
+        login(client)
+
+    assert not interrupted.exists()
+
+
 def test_save_listing_requires_authentication(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
     configure_auth(monkeypatch, tmp_path)
     with TestClient(create_app()) as client:

@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shutil
 import time
 import uuid
 from dataclasses import dataclass
@@ -143,6 +144,16 @@ class CheckpointWriter:
         if file_record.get("sha256") != hashlib.sha256(state_bytes).hexdigest():
             raise ValueError("checkpoint state hash mismatch")
         return manifest, state
+
+    def cleanup_interrupted_generations(self) -> int:
+        if not self.checkpoints_dir.exists():
+            return 0
+        removed = 0
+        for path in self.checkpoints_dir.iterdir():
+            if path.is_dir() and path.name.startswith(".") and path.name.endswith(".tmp"):
+                shutil.rmtree(path)
+                removed += 1
+        return removed
 
     @staticmethod
     def _write_json(path: Path, payload: dict[str, Any]) -> bytes:

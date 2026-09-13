@@ -402,3 +402,21 @@ Records delivered work and actual evidence. Planned features belong in [ROADMAP.
 ### Limitations
 
 - Metadata-autosave baseline only: no background autosave worker, restore safety snapshot, retention policy, export/import, biology/economy/learner state, or UI exists yet.
+
+## 2026-09-13 — R1 interrupted-checkpoint cleanup baseline
+
+### Added
+
+- Added startup cleanup for interrupted metadata-checkpoint generation directories left as hidden `*.tmp` directories under `checkpoints/`.
+- Added tests verifying cleanup removes interrupted generation directories while preserving complete checkpoint directories.
+- Updated roadmap, persistence notes, and evidence documentation.
+
+### Evidence and verification
+
+- `python -m pytest tests/unit/app/test_checkpoints.py tests/unit/app/test_server.py` passed with 35 tests and the documented FastAPI/Starlette `TestClient` deprecation warning.
+- `ruff check src/arboria/app/checkpoints.py src/arboria/app/server.py tests/unit/app/test_checkpoints.py tests/unit/app/test_server.py` passed.
+- `mypy src tests/unit` passed.
+
+### Limitations
+
+- Cleanup baseline only: active-checkpoint corruption handling, disk-full behavior, migration tooling, restore fallback selection, retention, and failure-injection tests remain unimplemented.

@@ -97,6 +97,7 @@ def create_app() -> FastAPI:
         nonlocal clock, world_loop, world_metadata
         lock.acquire()
         try:
+            checkpoint_writer.cleanup_interrupted_generations()
             world_metadata = metadata_store.initialize_for_process_start()
             clock = SimulationClock.from_state(world_metadata.clock)
             world_loop = WorldLoop(world_metadata.loop)
