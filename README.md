@@ -69,11 +69,12 @@ Current verification commands:
 ```bash
 python -m pytest tests/unit
 ruff check .
-mypy src tests/unit
+mypy src tests/unit tests/performance
 PATH="$CONDA_PREFIX/bin:$PATH" npm --prefix web run check
 PATH="$CONDA_PREFIX/bin:$PATH" npm --prefix web run test
 PATH="$CONDA_PREFIX/bin:$PATH" npm --prefix web run test:e2e
 PATH="$CONDA_PREFIX/bin:$PATH" npm --prefix web run build
+python -m pytest tests/performance -m performance
 ```
 
 These are baseline smoke checks only. The first playable release must supply the broader verification commands and suites described in [testing](docs/testing.md). Dependency and launcher smoke checks are recorded in `CHANGELOG.md`.

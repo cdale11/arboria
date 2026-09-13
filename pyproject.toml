@@ -9,6 +9,7 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 python_version = "3.13"
 strict = true
 warn_unused_configs = true
+mypy_path = "src"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

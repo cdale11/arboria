@@ -15,6 +15,18 @@ Records delivered work and actual evidence. Planned features belong in [ROADMAP.
 - `npm --prefix web run test`: 21 passed.
 - `npm --prefix web run test:e2e`: 1 passed.
 - `npm --prefix web run build`
+- `python -m pytest tests/performance -m performance`: 7 passed in 240.04 seconds.
+- 500-plant p95 single-tick latency measured at 145.3 ms on the inspected host;
+  1,000-plant p95 measured at 513.3 ms and remains an open R6-scale limitation.
+- Added the marked headless scale/soak harness under `tests/performance/` and
+  included it in strict mypy coverage.
+
+### Performance correction
+
+- Removed redundant whole-organ topology validation from private hot-loop
+  exchange helpers. Public `advance_nursery` boundary validation remains in
+  place; this reduced the profiled 500-plant tick from approximately 2.06 s to
+  0.135 s without disabling biological activity.
 
 ## 2026-09-14 — Live 2.5D nursery scene wiring
 

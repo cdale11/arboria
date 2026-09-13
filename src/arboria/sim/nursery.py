@@ -719,7 +719,6 @@ def _apply_nutrient_uptake(
                 ),
             )
         )
-    validate_topology(next_organs)
     return next_organs
 
 
@@ -744,7 +743,6 @@ def _apply_stress_damage(
         next_organs.append(
             replace(organ, damage_fraction=damage.damage_fraction, alive=damage.alive)
         )
-    validate_topology(next_organs)
     return next_organs
 
 
@@ -770,7 +768,6 @@ def _apply_zone_exchange(
         )
     if transpiration_left > 1e-12:
         raise ValueError("transpiration exceeds available plant water")
-    validate_topology(next_organs)
     return next_organs
 
 

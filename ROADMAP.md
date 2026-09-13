@@ -102,7 +102,7 @@ Dependency: P0. This is the first playable release, not a skeleton server.
 - [x] Launcher fresh/repeat/offline/setup interruption and authentication gates pass. Evidence: `docs/evidence/R1-launcher-gates.md` and `docs/evidence/R1.md`.
 - [ ] Full playable loop browser tests and recorded real touch-device smoke test pass.
 - [ ] [AI/ML] Learning holdout/ablation gates in `docs/testing.md` pass; baseline-only fallback honestly identified.
-- [ ] Target-host 500-plant performance, 1,000-plant characterization, 24-real-hour soak, and ten-sim-year stability suite completed.
+- [ ] Target-host 500-plant performance, 1,000-plant characterization, 24-real-hour soak, and ten-sim-year stability suite completed. Partial evidence: `docs/evidence/R1.md` records passing 500-plant latency and a bounded 50-plant ten-sim-year soak; the full gate remains open.
 - [ ] `docs/evidence/R1.md`, updated docs/changelog, reviewed commit, verified push. Evidence is current, but this gate remains open until full R1 blockers above are resolved.
 
 R1 scope excludes sexual reproduction, advanced bonsai craft, layered chemistry/compost ecology, learned seasonal commercial planning, and experimental rule invention. Existing starter tree/bonsai forms are live biological stock, not evidence those later mechanics work. No later-feature controls appear until their release is functional.
