@@ -29,6 +29,8 @@ Water, carbon, N, P, and K are tracked separately. Biomass conversion factors sp
 
 Plant state includes developmental age, organ topology, genotype modifiers, resource pools, hydraulic stress, damage, and phenology. Substrate state includes volume, water, drainage capacity, oxygen proxy, mineral pools, temperature, and later organic pools/pH/buffering. Climate state includes temperature, humidity, radiation, rain, and wind proxies.
 
+Implemented R1 baseline biology currently includes pure organ topology validation and explicit resource pools only. `Organ` records have positive stable IDs, plant IDs, optional parent IDs, organ kind, created tick, developmental stage, geometry fields, alive/damage state, cohort count, and separate structural carbon, reserve carbon, water, nitrogen, phosphorus, and potassium pools. Validation rejects duplicate IDs, missing/cross-plant parents, cyclic parentage, nonfinite values, negative geometry/resources, invalid damage fractions, and non-cohort aggregate counts. Growth, light, water uptake, nutrients, stress, damage progression, death, species parameters, persistence integration, and UI are not implemented yet.
+
 ## 3. Generic update rules
 
 For a conserved pool `x` in kg:

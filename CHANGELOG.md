@@ -439,3 +439,24 @@ Records delivered work and actual evidence. Planned features belong in [ROADMAP.
 ### Limitations
 
 - Active-checkpoint validation baseline only: fallback selection, repair, import validation, disk-full handling, migrations, and complete biology/economy/learner recovery remain unimplemented.
+
+## 2026-09-13 — R1 organ-topology biology baseline
+
+### Added
+
+- Added pure biology organ topology and resource-pool module.
+- Added R1 organ kinds for structural organs and leaf/root cohorts.
+- Added explicit structural carbon, reserve carbon, water, nitrogen, phosphorus, and potassium pools.
+- Added validation for stable IDs, one root per plant, existing same-plant parents, acyclic parentage, finite nonnegative values, bounded damage, and cohort-count rules.
+- Added biology unit tests for topology and resource invariants.
+- Updated roadmap, biology docs, and evidence documentation.
+
+### Evidence and verification
+
+- `python -m pytest tests/unit/biology/test_organs.py` passed with 7 tests.
+- `ruff check src/arboria/biology tests/unit/biology` passed.
+- `mypy src tests/unit` passed.
+
+### Limitations
+
+- Biology baseline only: no growth, light, carbon assimilation, water/nutrient uptake, stress, damage progression, death, species catalog, persistence integration, commands, or UI exists yet.

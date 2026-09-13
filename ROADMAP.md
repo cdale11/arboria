@@ -63,7 +63,7 @@ Dependency: P0. This is the first playable release, not a skeleton server.
 
 #### Biology and species
 
-- [ ] Implement organ topology with stable IDs, acyclic parentage, cohort rules, and explicit resource pools.
+- [x] Implement organ topology with stable IDs, acyclic parentage, cohort rules, and explicit resource pools. Evidence: `docs/evidence/R1-organ-topology.md`.
 - [ ] Implement causal vegetative development driven by resources rather than decorative branch generation.
 - [ ] Implement light, carbon, water, N/P/K, root-zone environment, stress, damage, and death for R1 coverage.
 - [ ] Deliver six proposed representative species in outdoor/greenhouse zones with source-backed or explicitly provisional parameter metadata and reviewed scenarios.
