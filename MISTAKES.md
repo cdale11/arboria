@@ -33,6 +33,21 @@ This is an incident log, not a list of imagined failures. Add entries when an ac
 - **Correction:** Replaced parenthesized lists with comma-separated `nonlocal` statements before rerunning gates.
 - **Prevention:** Use one `nonlocal name1, name2, ...` statement per scope; run targeted imports/tests immediately after editing closure state.
 
+## M-005 — Full-target soak exceeded execution budget (2026-09-14)
+
+- **Observed:** The requested 500-plant, ten-sim-year headless soak built in
+  0.71 seconds but exceeded its 900-second execution budget during the
+  1,051,200-tick run.
+- **Cause:** The current pure-Python nursery still performs repeated
+  full-organ-list work in growth and per-plant assimilation.
+- **Impact:** The target-scale decade-stability gate remains open; no final
+  checkpoint or stability claim was recorded.
+- **Correction:** Preserved the timeout as evidence, retained the passing
+  bounded 50-plant decade test, and documented the remaining bottleneck instead
+  of weakening the gate.
+- **Prevention:** Profile and reduce remaining full-list work before retrying
+  the full target-scale soak; keep timeout outcomes distinct from passes.
+
 ## Anticipated risks — not observed incidents
 
 These are design-review reminders, not claims that errors have happened:

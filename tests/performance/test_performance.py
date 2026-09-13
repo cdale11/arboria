@@ -77,6 +77,11 @@ def test_ten_sim_year_stability_keeps_state_finite() -> None:
     assert checkpoint.dead_plant_count >= 0
     assert checkpoint.reserve_carbon_kg >= 0.0
     assert checkpoint.structural_carbon_kg >= 0.0
+    assert abs(checkpoint.water_residual_kg) < 1e-9
+    assert checkpoint.max_rss_mb > 0.0
+    assert checkpoint.invariant_samples == 10
+    assert checkpoint.exception_count == 0
+    assert not checkpoint.stalled
     assert elapsed > 0.0
 
 

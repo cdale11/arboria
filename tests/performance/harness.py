@@ -121,24 +121,49 @@ class SoakCheckpoint:
     zone_water_kg: float
     finite: bool
     within_capacity: bool
+    max_rss_mb: float
+    water_residual_kg: float
+    invariant_samples: int
+    exception_count: int
+    stalled: bool
 
 
 def run_soak(state: NurseryState, ticks: int) -> SoakCheckpoint:
-    """Advance `ticks` in chunked batches, checking invariants at the end."""
+    """Advance `ticks` in chunked batches while sampling stability invariants."""
     organs = state.organs
     zones = state.zones
     nutrient_zones = state.nutrient_zones
+    initial_water = sum(organ.pools.water_kg for organ in organs) + sum(zones.values())
+    transpired = 0.0
+    drainage = 0.0
+    max_rss_mb = _rss_mb()
+    invariant_samples = 0
+    exception_count = 0
+    stalled = False
     remaining = ticks
     chunk = 48  # one sim day per advance call, bounding peak per-call work
     while remaining > 0:
         step = min(chunk, remaining)
-        result = advance_nursery(organs, zones, nutrient_zones, step, state.species_by_plant)
+        try:
+            result = advance_nursery(
+                organs, zones, nutrient_zones, step, state.species_by_plant
+            )
+        except Exception:
+            exception_count += 1
+            raise
         organs, zones, nutrient_zones = (
             result.organs,
             result.zones,
             result.nutrient_zones,
         )
+        transpired += result.transpired_kg
+        drainage += result.drainage_kg
         remaining -= step
+        if remaining % TICKS_PER_YEAR == 0 or remaining == 0:
+            invariant_samples += 1
+            max_rss_mb = max(max_rss_mb, _rss_mb())
+            if step <= 0:
+                stalled = True
     summary = summarize(organs, zones, nutrient_zones, species_by_plant=state.species_by_plant)
     finite = all(
         math.isfinite(value)
@@ -158,4 +183,27 @@ def run_soak(state: NurseryState, ticks: int) -> SoakCheckpoint:
         zone_water_kg=summary.zone_water_kg,
         finite=finite,
         within_capacity=within_capacity,
+        max_rss_mb=max_rss_mb,
+        water_residual_kg=(
+            initial_water
+            - sum(organ.pools.water_kg for organ in organs)
+            - sum(zones.values())
+            - transpired
+            - drainage
+        ),
+        invariant_samples=invariant_samples,
+        exception_count=exception_count,
+        stalled=stalled,
     )
+
+
+def _rss_mb() -> float:
+    """Return current Linux process RSS; unavailable platforms report zero."""
+    try:
+        with open("/proc/self/status", encoding="ascii") as status:
+            for line in status:
+                if line.startswith("VmRSS:"):
+                    return float(line.split()[1]) / 1024.0
+    except OSError:
+        return 0.0
+    return 0.0

@@ -18,6 +18,9 @@ Records delivered work and actual evidence. Planned features belong in [ROADMAP.
 - `python -m pytest tests/performance -m performance`: 7 passed in 221.05 seconds.
 - 500-plant p95 single-tick latency measured at 98.9 ms on the inspected host;
   1,000-plant p95 measured at 338.3 ms and remains an open R6-scale limitation.
+- The full 500-plant, 10-sim-year run was attempted with a 900-second budget;
+  the 0.71-second build completed, but the 1,051,200-tick soak timed out and
+  remains an open gate.
 - Added the marked headless scale/soak harness under `tests/performance/` and
   included it in strict mypy coverage.
 
