@@ -226,6 +226,68 @@ class MetadataStore:
                 for row in rows
             ]
 
+    def snapshot_by_name(self, name: str) -> SnapshotName | None:
+        with self._connect() as connection:
+            self._create_schema(connection)
+            row = connection.execute(
+                "SELECT name, checkpoint_id, created_unix_s, protected FROM snapshot_names "
+                "WHERE name = ?",
+                (name,),
+            ).fetchone()
+            if row is None:
+                return None
+            return SnapshotName(
+                name=str(row["name"]),
+                checkpoint_id=str(row["checkpoint_id"]),
+                created_unix_s=int(row["created_unix_s"]),
+                protected=bool(row["protected"]),
+            )
+
+    def restore_checkpoint(
+        self,
+        *,
+        checkpoint_id: str,
+        clock: ClockState,
+        loop: WorldLoopState,
+    ) -> WorldMetadata:
+        with self._connect() as connection:
+            self._create_schema(connection)
+            row = connection.execute(
+                "SELECT world_id, schema_version, request_epoch FROM worlds WHERE id = 1"
+            ).fetchone()
+            if row is None:
+                raise RuntimeError("World metadata has not been initialized.")
+            timeline_id = str(uuid.uuid4())
+            request_epoch = int(row["request_epoch"]) + 1
+            now = int(time.time())
+            connection.execute(
+                "UPDATE worlds SET timeline_id = ?, request_epoch = ?, active_checkpoint_id = ?, "
+                "clock_sim_time_seconds = ?, clock_speed = ?, clock_paused = ?, sim_tick = ?, "
+                "world_revision = ?, consumed_sim_time_seconds = ?, updated_at = ? WHERE id = 1",
+                (
+                    timeline_id,
+                    request_epoch,
+                    checkpoint_id,
+                    clock.sim_time_seconds,
+                    clock.speed,
+                    int(clock.paused),
+                    loop.sim_tick,
+                    loop.world_revision,
+                    loop.consumed_sim_time_seconds,
+                    now,
+                ),
+            )
+            connection.commit()
+            return WorldMetadata(
+                world_id=str(row["world_id"]),
+                timeline_id=timeline_id,
+                schema_version=int(row["schema_version"]),
+                request_epoch=request_epoch,
+                active_checkpoint_id=checkpoint_id,
+                clock=clock,
+                loop=loop,
+            )
+
     def find_receipt(
         self, timeline_id: str, request_epoch: int, command_id: str
     ) -> Receipt | None:

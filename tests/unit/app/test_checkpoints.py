@@ -37,3 +37,25 @@ def test_checkpoint_writer_creates_immutable_manifest_and_state(tmp_path: Path) 
     assert record.manifest_hash == hashlib.sha256(
         (checkpoint_dir / "manifest.json").read_bytes()
     ).hexdigest()
+
+
+def test_checkpoint_reader_rejects_corrupt_state(tmp_path: Path) -> None:
+    store = MetadataStore(tmp_path)
+    metadata = store.initialize_for_process_start()
+    writer = CheckpointWriter(tmp_path)
+    record, _ = writer.create(
+        metadata=metadata,
+        clock=ClockState(sim_time_seconds=0.0, speed=48.0, paused=False),
+        loop=WorldLoopState(0, 0, 0.0),
+        parent_checkpoint_id=None,
+        receipt_count=0,
+    )
+    (tmp_path / "checkpoints" / record.checkpoint_id / "state.json").write_text(
+        "{}", encoding="utf-8"
+    )
+
+    try:
+        writer.load(record.checkpoint_id)
+        raise AssertionError("corrupt checkpoint should be rejected")
+    except ValueError as exc:
+        assert "mismatch" in str(exc)

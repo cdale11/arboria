@@ -332,6 +332,54 @@ def test_named_save_rejects_path_like_names(
     assert response.status_code == 400
 
 
+def test_restore_named_save_rotates_timeline_and_restores_clock(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    with TestClient(create_app()) as client:
+        csrf = login(client)
+        initial_world = client.get("/api/v1/world").json()
+        saved = client.post(
+            "/api/v1/saves/named",
+            json={"name": "Before change"},
+            headers={CSRF_HEADER_NAME: csrf},
+        ).json()
+        changed = client.post(
+            "/api/v1/commands",
+            json=command(initial_world, "clock.set_speed", {"speed": 12.0}),
+            headers={CSRF_HEADER_NAME: csrf},
+        )
+        assert changed.status_code == 200
+        restored = client.post(
+            "/api/v1/saves/restore",
+            json={"name": "Before change"},
+            headers={CSRF_HEADER_NAME: csrf},
+        )
+        world = client.get("/api/v1/world").json()
+        clock_payload = client.get("/api/v1/clock").json()
+
+    assert restored.status_code == 200
+    assert restored.json()["restored"] is True
+    assert world["world_id"] == initial_world["world_id"]
+    assert world["timeline_id"] != initial_world["timeline_id"]
+    assert world["request_epoch"] == initial_world["request_epoch"] + 1
+    assert world["active_checkpoint_id"] == saved["checkpoint"]["checkpoint_id"]
+    assert clock_payload["speed"] == 48.0
+
+
+def test_restore_rejects_unknown_name(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    with TestClient(create_app()) as client:
+        csrf = login(client)
+        response = client.post(
+            "/api/v1/saves/restore",
+            json={"name": "missing"},
+            headers={CSRF_HEADER_NAME: csrf},
+        )
+
+    assert response.status_code == 404
+
+
 def command(world: dict[str, object], kind: str, payload: dict[str, object]) -> dict[str, object]:
     return {
         "schema_version": 1,

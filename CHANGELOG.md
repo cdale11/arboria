@@ -360,3 +360,24 @@ Records delivered work and actual evidence. Planned features belong in [ROADMAP.
 ### Limitations
 
 - No implementation behavior changed.
+
+## 2026-09-13 — R1 metadata-restore baseline
+
+### Added
+
+- Added checkpoint manifest/state validation for metadata-only checkpoint generations.
+- Added CSRF-protected `/api/v1/saves/restore` endpoint accepting a checkpoint ID or named save.
+- Restored clock and tick/revision state from validated metadata checkpoints.
+- Rotated timeline and request epoch on restore, invalidating old command envelopes.
+- Added tests for corrupt checkpoint rejection, named-save restore, timeline/epoch rotation, clock restoration, and unknown save names.
+- Updated README, roadmap, persistence notes, and evidence documentation.
+
+### Evidence and verification
+
+- `python -m pytest tests/unit/app/test_checkpoints.py tests/unit/app/test_metadata.py tests/unit/app/test_server.py` passed with 38 tests and the documented FastAPI/Starlette `TestClient` deprecation warning.
+- `ruff check src/arboria/app/checkpoints.py src/arboria/app/metadata.py src/arboria/app/server.py tests/unit/app/test_checkpoints.py tests/unit/app/test_metadata.py tests/unit/app/test_server.py` passed.
+- `mypy src tests/unit` passed.
+
+### Limitations
+
+- Metadata-restore baseline only: no biology, economy, learner state, RNG streams, pending events, pre-restore safety snapshots, export/import, autosave, retention, UI, or full corruption-recovery flow exists yet.

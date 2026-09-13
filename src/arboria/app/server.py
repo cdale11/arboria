@@ -13,7 +13,12 @@ from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect, 
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from arboria.sim.clock import ClockValidationError, SimulationClock, clock_status_payload
+from arboria.sim.clock import (
+    ClockState,
+    ClockValidationError,
+    SimulationClock,
+    clock_status_payload,
+)
 from arboria.sim.world_loop import WorldLoop, WorldLoopState
 
 from .auth import (
@@ -379,6 +384,66 @@ def create_app() -> FastAPI:
             "protected": True,
         }
         return JSONResponse({"snapshot": snapshot, "checkpoint": checkpoint})
+
+    @app.post("/api/v1/saves/restore")
+    async def restore_save(request: Request) -> Response:
+        nonlocal clock, world_loop, world_metadata
+        rejection = require_auth_and_csrf(request)
+        if rejection is not None:
+            return rejection
+        payload = await request.json()
+        if not isinstance(payload, dict):
+            return JSONResponse({"detail": "invalid payload"}, status_code=400)
+        checkpoint_id = payload.get("checkpoint_id")
+        name = payload.get("name")
+        if isinstance(name, str):
+            snapshot = metadata_store.snapshot_by_name(name)
+            if snapshot is None:
+                return JSONResponse({"detail": "unknown save name"}, status_code=404)
+            checkpoint_id = snapshot.checkpoint_id
+        if not isinstance(checkpoint_id, str):
+            return JSONResponse({"detail": "checkpoint_id or name is required"}, status_code=400)
+        try:
+            manifest, state = checkpoint_writer.load(checkpoint_id)
+            clock_state = state["clock"]
+            loop_state = state["loop"]
+            restored_clock = SimulationClock.from_state(
+                ClockState(
+                    sim_time_seconds=float(clock_state["sim_time_seconds"]),
+                    speed=float(clock_state["speed"]),
+                    paused=bool(clock_state["paused"]),
+                )
+            )
+            restored_loop_state = WorldLoopState(
+                sim_tick=int(loop_state["sim_tick"]),
+                world_revision=int(loop_state["world_revision"]),
+                consumed_sim_time_seconds=float(loop_state["consumed_sim_time_seconds"]),
+            )
+        except (FileNotFoundError, KeyError, TypeError, ValueError) as exc:
+            return JSONResponse({"detail": str(exc)}, status_code=400)
+        clock_state = restored_clock.state()
+        world_metadata = metadata_store.restore_checkpoint(
+            checkpoint_id=checkpoint_id,
+            clock=clock_state,
+            loop=restored_loop_state,
+        )
+        clock = restored_clock
+        world_loop = WorldLoop(restored_loop_state)
+        return JSONResponse(
+            {
+                "restored": True,
+                "checkpoint_id": checkpoint_id,
+                "manifest": manifest,
+                "world": {
+                    "world_id": world_metadata.world_id,
+                    "timeline_id": world_metadata.timeline_id,
+                    "request_epoch": world_metadata.request_epoch,
+                    "active_checkpoint_id": world_metadata.active_checkpoint_id,
+                    **loop_payload(world_metadata.loop),
+                },
+                "clock": clock_status_payload(clock.status()),
+            }
+        )
 
     @app.post("/api/v1/commands")
     async def submit_command(request: Request) -> Response:

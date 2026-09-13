@@ -10,6 +10,7 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from uuid import UUID
 
 from arboria.app.metadata import WorldMetadata
 from arboria.sim.clock import ClockState
@@ -108,6 +109,35 @@ class CheckpointWriter:
             status="complete",
         )
         return record, manifest
+
+    def load(self, checkpoint_id: str) -> tuple[dict[str, Any], dict[str, Any]]:
+        try:
+            UUID(checkpoint_id)
+        except ValueError as exc:
+            raise ValueError("checkpoint_id must be a UUID") from exc
+        checkpoint_dir = self.checkpoints_dir / checkpoint_id
+        manifest_path = checkpoint_dir / "manifest.json"
+        state_path = checkpoint_dir / "state.json"
+        if not manifest_path.is_file() or not state_path.is_file():
+            raise FileNotFoundError("checkpoint files are missing")
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        if not isinstance(manifest, dict) or not isinstance(state, dict):
+            raise ValueError("checkpoint JSON must contain objects")
+        if manifest.get("checkpoint_id") != checkpoint_id:
+            raise ValueError("checkpoint manifest ID mismatch")
+        files = manifest.get("files")
+        if not isinstance(files, list) or len(files) != 1:
+            raise ValueError("checkpoint manifest must describe state.json")
+        file_record = files[0]
+        if not isinstance(file_record, dict) or file_record.get("relative_path") != "state.json":
+            raise ValueError("checkpoint manifest file record is invalid")
+        state_bytes = state_path.read_bytes()
+        if int(file_record.get("size_bytes", -1)) != len(state_bytes):
+            raise ValueError("checkpoint state size mismatch")
+        if file_record.get("sha256") != hashlib.sha256(state_bytes).hexdigest():
+            raise ValueError("checkpoint state hash mismatch")
+        return manifest, state
 
     @staticmethod
     def _write_json(path: Path, payload: dict[str, Any]) -> bytes:
