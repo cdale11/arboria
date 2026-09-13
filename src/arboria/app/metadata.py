@@ -24,6 +24,7 @@ class WorldMetadata:
     timeline_id: str
     schema_version: int
     request_epoch: int
+    active_checkpoint_id: str | None
     clock: ClockState
     loop: WorldLoopState
 
@@ -40,8 +41,8 @@ class MetadataStore:
         with self._connect() as connection:
             self._create_schema(connection)
             row = connection.execute(
-                "SELECT world_id, schema_version, request_epoch, clock_sim_time_seconds, "
-                "clock_speed, clock_paused, sim_tick, world_revision, "
+                "SELECT world_id, schema_version, request_epoch, active_checkpoint_id, "
+                "clock_sim_time_seconds, clock_speed, clock_paused, sim_tick, world_revision, "
                 "consumed_sim_time_seconds FROM worlds WHERE id = 1"
             ).fetchone()
             next_timeline = str(uuid.uuid4())
@@ -65,8 +66,10 @@ class MetadataStore:
                 )
                 clock = ClockState(0.0, 48.0, False)
                 loop = WorldLoopState(0, 0, 0.0)
+                active_checkpoint_id = None
             else:
                 world_id = str(row["world_id"])
+                active_checkpoint_id = row["active_checkpoint_id"]
                 epoch = int(row["request_epoch"]) + 1
                 connection.execute(
                     "UPDATE worlds SET timeline_id = ?, request_epoch = ?, updated_at = ? "
@@ -89,6 +92,7 @@ class MetadataStore:
                 next_timeline,
                 METADATA_SCHEMA_VERSION,
                 epoch,
+                active_checkpoint_id,
                 clock,
                 loop,
             )
@@ -120,8 +124,9 @@ class MetadataStore:
         with self._connect() as connection:
             row = connection.execute(
                 "SELECT world_id, timeline_id, schema_version, request_epoch, "
-                "clock_sim_time_seconds, clock_speed, clock_paused, sim_tick, "
-                "world_revision, consumed_sim_time_seconds FROM worlds WHERE id = 1"
+                "active_checkpoint_id, clock_sim_time_seconds, clock_speed, "
+                "clock_paused, sim_tick, world_revision, "
+                "consumed_sim_time_seconds FROM worlds WHERE id = 1"
             ).fetchone()
             if row is None:
                 raise RuntimeError("World metadata has not been initialized.")
@@ -130,6 +135,7 @@ class MetadataStore:
                 timeline_id=str(row["timeline_id"]),
                 schema_version=int(row["schema_version"]),
                 request_epoch=int(row["request_epoch"]),
+                active_checkpoint_id=row["active_checkpoint_id"],
                 clock=ClockState(
                     sim_time_seconds=float(row["clock_sim_time_seconds"]),
                     speed=float(row["clock_speed"]),
@@ -141,6 +147,45 @@ class MetadataStore:
                     consumed_sim_time_seconds=float(row["consumed_sim_time_seconds"]),
                 ),
             )
+
+    def receipt_count(self) -> int:
+        with self._connect() as connection:
+            self._create_schema(connection)
+            row = connection.execute("SELECT COUNT(*) FROM command_receipts").fetchone()
+            return int(row[0])
+
+    def register_checkpoint(
+        self,
+        *,
+        checkpoint_id: str,
+        parent_checkpoint_id: str | None,
+        sim_tick: int,
+        world_revision: int,
+        created_unix_s: int,
+        manifest_hash: str,
+        status: str,
+    ) -> None:
+        with self._connect() as connection:
+            self._create_schema(connection)
+            connection.execute(
+                "INSERT INTO checkpoints (checkpoint_id, parent_checkpoint_id, sim_tick, "
+                "world_revision, created_unix_s, manifest_hash, status) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (
+                    checkpoint_id,
+                    parent_checkpoint_id,
+                    sim_tick,
+                    world_revision,
+                    created_unix_s,
+                    manifest_hash,
+                    status,
+                ),
+            )
+            connection.execute(
+                "UPDATE worlds SET active_checkpoint_id = ?, updated_at = ? WHERE id = 1",
+                (checkpoint_id, int(time.time())),
+            )
+            connection.commit()
 
     def find_receipt(
         self, timeline_id: str, request_epoch: int, command_id: str
@@ -258,5 +303,16 @@ class MetadataStore:
             "result_json TEXT, "
             "created_unix_s INTEGER NOT NULL, "
             "PRIMARY KEY (timeline_id, request_epoch, command_id)"
+            ")"
+        )
+        connection.execute(
+            "CREATE TABLE IF NOT EXISTS checkpoints ("
+            "checkpoint_id TEXT PRIMARY KEY, "
+            "parent_checkpoint_id TEXT, "
+            "sim_tick INTEGER NOT NULL CHECK (sim_tick >= 0), "
+            "world_revision INTEGER NOT NULL CHECK (world_revision >= 0), "
+            "created_unix_s INTEGER NOT NULL, "
+            "manifest_hash TEXT NOT NULL, "
+            "status TEXT NOT NULL CHECK (status IN ('complete'))"
             ")"
         )

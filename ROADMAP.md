@@ -49,7 +49,7 @@ Dependency: P0. This is the first playable release, not a skeleton server.
 #### Persistence and recovery
 
 - [x] Implement SQLite metadata store. Evidence: `docs/evidence/R1-world-metadata.md`.
-- [ ] Implement immutable checkpoint generation layout.
+- [x] Implement immutable checkpoint generation layout. Evidence: `docs/evidence/R1-checkpoint-layout.md`.
 - [ ] Implement autosave, named saves, restore, export/import, and consistent world+learner checkpoint protocol.
 - [ ] Implement crash/disk-failure recovery and migration protocol.
 - [ ] Add atomic-save failure-injection tests.

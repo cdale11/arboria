@@ -39,6 +39,7 @@ def test_health_reports_current_implementation_scope(
     assert payload["implemented"]["process_lock"] is True
     assert payload["implemented"]["world_metadata"] is True
     assert payload["implemented"]["stream_protocol"] is True
+    assert payload["implemented"]["checkpoint_layout"] is True
     assert payload["implemented"]["simulation"] is False
     assert payload["implemented"]["persistence"] is False
 
@@ -237,6 +238,45 @@ def test_world_loop_fields_are_reported(monkeypatch: MonkeyPatch, tmp_path: Path
     assert world["sim_tick"] >= 0
     assert world["world_revision"] >= 0
     assert world["consumed_sim_time_seconds"] >= 0.0
+
+
+def test_manual_checkpoint_requires_authentication(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    with TestClient(create_app()) as client:
+        response = client.post("/api/v1/saves/checkpoint")
+
+    assert response.status_code == 401
+
+
+def test_manual_checkpoint_requires_csrf(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    with TestClient(create_app()) as client:
+        login(client)
+        response = client.post("/api/v1/saves/checkpoint")
+
+    assert response.status_code == 403
+
+
+def test_manual_checkpoint_creates_manifest_and_updates_world(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    with TestClient(create_app()) as client:
+        csrf = login(client)
+        response = client.post(
+            "/api/v1/saves/checkpoint", headers={CSRF_HEADER_NAME: csrf}
+        )
+        world = client.get("/api/v1/world").json()
+
+    payload = response.json()
+    checkpoint_id = payload["checkpoint_id"]
+    assert response.status_code == 200
+    assert payload["status"] == "complete"
+    assert (tmp_path / "checkpoints" / checkpoint_id / "manifest.json").is_file()
+    assert (tmp_path / "checkpoints" / checkpoint_id / "state.json").is_file()
+    assert world["active_checkpoint_id"] == checkpoint_id
 
 
 def command(world: dict[str, object], kind: str, payload: dict[str, object]) -> dict[str, object]:

@@ -16,6 +16,7 @@ Current partial layout:
 ```text
 var/
   world.sqlite3          # Implemented R1 metadata: world identity, timeline identity, clock state
+  checkpoints/<id>/      # Implemented R1 metadata-only checkpoint generations
   auth/                  # Password hash and session storage, private permissions
   server.lock            # OS-backed lock target
 ```
@@ -25,7 +26,6 @@ Planned additions:
 ```text
 var/
   world.sqlite3          # Later also stores committed checkpoint references and receipts
-  checkpoints/<id>/      # Immutable world/learner arrays and manifest
   exports/               # User-requested backup archives
   logs/                  # Bounded operational logs; no secrets
 ```
@@ -35,6 +35,8 @@ var/
 ## 3. Versioned metadata
 
 Implemented R1 metadata currently records one `worlds` row with world UUID, process-start timeline UUID, schema version, request epoch, optional active checkpoint ID, creation/update timestamps, clock `sim_time_seconds`, `speed`, `paused` fields, `sim_tick`, `world_revision`, and consumed simulation time. Startup keeps the world UUID, rotates the timeline UUID/request epoch, and loads the saved clock/tick state without adding elapsed wall time while the server was stopped.
+
+Implemented R1 checkpoints are immutable metadata-only generations under `checkpoints/<checkpoint_id>/` with `manifest.json` and `state.json`. They record the current world/timeline/request epoch, clock, tick/revision state, and receipt count, then register a complete checkpoint row and active checkpoint ID in SQLite. They do not yet contain biology, economy, learner arrays, RNG streams, pending queues, named snapshot metadata, restore validation, export/import, or retention behavior.
 
 Minimum full SQLite entities:
 

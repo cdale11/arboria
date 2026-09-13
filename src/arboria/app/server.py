@@ -27,6 +27,7 @@ from .auth import (
     session_is_valid,
     verify_password,
 )
+from .checkpoints import CheckpointWriter
 from .commands import (
     CommandEnvelope,
     CommandService,
@@ -72,6 +73,7 @@ def _origin_is_allowed(request: Request) -> bool:
 def create_app() -> FastAPI:
     lock = DataDirectoryLock()
     metadata_store = MetadataStore(lock.root)
+    checkpoint_writer = CheckpointWriter(lock.root)
     world_metadata: WorldMetadata | None = None
     clock = SimulationClock()
     world_loop = WorldLoop()
@@ -167,6 +169,41 @@ def create_app() -> FastAPI:
             "base_tick_seconds": 300,
         }
 
+    def create_checkpoint_payload() -> dict[str, Any]:
+        nonlocal world_metadata
+        metadata = require_world_metadata()
+        clock_state = clock.state()
+        loop_state = world_loop.drain(clock_state)
+        metadata_store.save_clock(clock_state)
+        metadata_store.save_loop(loop_state)
+        record, manifest = checkpoint_writer.create(
+            metadata=metadata,
+            clock=clock_state,
+            loop=loop_state,
+            parent_checkpoint_id=metadata.active_checkpoint_id,
+            receipt_count=metadata_store.receipt_count(),
+        )
+        metadata_store.register_checkpoint(
+            checkpoint_id=record.checkpoint_id,
+            parent_checkpoint_id=record.parent_checkpoint_id,
+            sim_tick=record.sim_tick,
+            world_revision=record.world_revision,
+            created_unix_s=record.created_unix_s,
+            manifest_hash=record.manifest_hash,
+            status=record.status,
+        )
+        world_metadata = metadata_store.load()
+        return {
+            "checkpoint_id": record.checkpoint_id,
+            "parent_checkpoint_id": record.parent_checkpoint_id,
+            "sim_tick": record.sim_tick,
+            "world_revision": record.world_revision,
+            "created_unix_s": record.created_unix_s,
+            "manifest_hash": record.manifest_hash,
+            "status": record.status,
+            "manifest": manifest,
+        }
+
     @app.middleware("http")
     async def reject_cross_origin_mutations(
         request: Request, call_next: Callable[[Request], Awaitable[Response]]
@@ -250,6 +287,7 @@ def create_app() -> FastAPI:
                 "world_metadata": True,
                 "simulation_clock": True,
                 "stream_protocol": True,
+                "checkpoint_layout": True,
                 "simulation": False,
                 "persistence": False,
                 "companion": False,
@@ -277,9 +315,17 @@ def create_app() -> FastAPI:
                 "timeline_id": metadata.timeline_id,
                 "schema_version": metadata.schema_version,
                 "request_epoch": metadata.request_epoch,
+                "active_checkpoint_id": metadata.active_checkpoint_id,
                 **loop_payload(loop),
             }
         )
+
+    @app.post("/api/v1/saves/checkpoint")
+    def create_checkpoint(request: Request) -> Response:
+        rejection = require_auth_and_csrf(request)
+        if rejection is not None:
+            return rejection
+        return JSONResponse(create_checkpoint_payload())
 
     @app.post("/api/v1/commands")
     async def submit_command(request: Request) -> Response:

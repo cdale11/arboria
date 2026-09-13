@@ -289,3 +289,24 @@ Records delivered work and actual evidence. Planned features belong in [ROADMAP.
 ### Limitations
 
 - World-loop baseline only: ticks do not run biological kernels, event processing, manager planning, horticultural command execution, projection deltas, or checkpoint scheduling yet.
+
+## 2026-09-13 — R1 checkpoint-layout baseline
+
+### Added
+
+- Added immutable metadata-only checkpoint generation directories under `checkpoints/<checkpoint_id>/`.
+- Added checkpoint `manifest.json` and `state.json` writing with SHA-256 file metadata and directory fsyncs before final promotion.
+- Added SQLite checkpoint registration and active checkpoint ID updates.
+- Added authenticated, CSRF-protected `/api/v1/saves/checkpoint` manual save endpoint.
+- Added tests for checkpoint file layout, hashes, active checkpoint updates, and API auth/CSRF behavior.
+- Updated health status, README, roadmap, persistence notes, and evidence documentation.
+
+### Evidence and verification
+
+- `python -m pytest tests/unit/app/test_checkpoints.py tests/unit/app/test_metadata.py tests/unit/app/test_server.py` passed with 30 tests and the documented FastAPI/Starlette `TestClient` deprecation warning.
+- `ruff check src/arboria/app/checkpoints.py src/arboria/app/metadata.py src/arboria/app/server.py tests/unit/app/test_checkpoints.py tests/unit/app/test_metadata.py tests/unit/app/test_server.py` passed.
+- `mypy src tests/unit` passed.
+
+### Limitations
+
+- Checkpoint-layout baseline only: no biology, economy, learner state, pending queues, autosave, named saves, restore, export/import, retention, corruption recovery, or failure-injection tests exist yet.
