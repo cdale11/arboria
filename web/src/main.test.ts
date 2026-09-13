@@ -312,6 +312,15 @@ function clickAction(target: HTMLElement, action: string, plantId?: number): voi
 }
 
 describe("nursery controls", () => {
+  it("mounts the generated nursery scene in the live app", async () => {
+    const { target } = await mountedClient();
+
+    const scene = target.querySelector('[data-action="nursery-scene"]');
+
+    expect(scene).not.toBeNull();
+    expect(scene?.querySelectorAll("ellipse[data-plant-id]")).toHaveLength(1);
+  });
+
   it("reads the CSRF token from cookies", () => {
     expect(readCsrfToken("a=1; arboria_csrf=token123; b=2")).toBe("token123");
     expect(readCsrfToken("a=1")).toBeNull();

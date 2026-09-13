@@ -871,8 +871,10 @@ export async function mountNurseryApp(
   const status = document.createElement("p");
   status.dataset.action = "status";
   status.textContent = "Loading nursery...";
+  const scene = document.createElement("div");
+  scene.dataset.action = "nursery-scene-slot";
   const panel = document.createElement("div");
-  target.append(heading, status, panel);
+  target.append(heading, status, scene, panel);
 
   let detail: PlantDetail | null = null;
   let result: string | null = null;
@@ -889,6 +891,7 @@ export async function mountNurseryApp(
         `Cash ${api.world.nursery.cash_minor} minor units, ` +
         `reservoir ${api.world.nursery.reservoir_kg.toFixed(3)} kg.`;
       status.textContent = lines;
+      scene.replaceChildren(renderNurseryScene(api.plants));
       const callbacks: ControlCallbacks = {
         onInspect: (plantId) => void inspectPlant(plantId),
         onWater: (plantId) => void runCommand("nursery.water", {

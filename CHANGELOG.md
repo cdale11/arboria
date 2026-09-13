@@ -2,6 +2,21 @@
 
 Records delivered work and actual evidence. Planned features belong in [ROADMAP.md](ROADMAP.md), not in claims of implemented behavior.
 
+## 2026-09-14 — Live 2.5D nursery scene wiring
+
+### Fixed
+
+- Mounted the generated 2.5D nursery SVG in the live frontend app refresh path so it is visible in the browser, not only in the standalone render helper.
+- Added visible-width SVG styling and a mounted-app regression test for the scene.
+
+### Evidence and verification
+
+- `npm --prefix web run check`
+- `npm --prefix web run test`: 21 passed.
+- `npm --prefix web run test:e2e`: 1 passed.
+- `npm --prefix web run build`
+- `python -m pytest tests/unit/app/test_nursery_api.py tests/unit/app/test_shop_api.py`: 18 passed, with the known FastAPI/Starlette `TestClient` deprecation warning.
+
 ## 2026-09-14 — R1 aggregate evidence synchronization
 
 ### Added
