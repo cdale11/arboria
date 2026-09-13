@@ -70,6 +70,63 @@ export function formatPlantSummary(plant: PlantSummary): string {
   );
 }
 
+export function renderNurseryScene(plants: PlantSummary[]): SVGSVGElement {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 360 180");
+  svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", "Generated nursery view");
+  svg.dataset.action = "nursery-scene";
+
+  const ground = document.createElementNS(svg.namespaceURI, "rect");
+  ground.setAttribute("x", "0");
+  ground.setAttribute("y", "128");
+  ground.setAttribute("width", "360");
+  ground.setAttribute("height", "52");
+  ground.setAttribute("fill", "#8f6f45");
+  svg.append(ground);
+
+  const ordered = [...plants].sort((left, right) => left.plant_id - right.plant_id);
+  for (const [index, plant] of ordered.entries()) {
+    const x = 36 + (index % 6) * 54;
+    const row = Math.floor(index / 6);
+    const baseY = 136 + Math.min(row, 1) * 14;
+    const height = Math.max(18, Math.min(86, plant.stem_length_m * 260));
+    const canopy = Math.max(10, Math.min(34, plant.leaf_area_m2 * 360));
+    const stress = Math.min(1, plant.water_stress_factor, plant.nutrient_stress_factor);
+    const leafColor = plant.alive
+      ? `rgb(${Math.round(80 + (1 - stress) * 100)}, ${Math.round(120 + stress * 90)}, 70)`
+      : "#6f6759";
+
+    const stem = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "line",
+    ) as SVGLineElement;
+    stem.setAttribute("x1", String(x));
+    stem.setAttribute("y1", String(baseY));
+    stem.setAttribute("x2", String(x));
+    stem.setAttribute("y2", String(baseY - height));
+    stem.setAttribute("stroke", plant.protected ? "#2f5d9f" : "#5b3a24");
+    stem.setAttribute("stroke-width", plant.protected ? "5" : "3");
+    stem.dataset.plantId = String(plant.plant_id);
+    svg.append(stem);
+
+    const leaves = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "ellipse",
+    ) as SVGEllipseElement;
+    leaves.setAttribute("cx", String(x));
+    leaves.setAttribute("cy", String(baseY - height));
+    leaves.setAttribute("rx", String(canopy));
+    leaves.setAttribute("ry", String(Math.max(7, canopy * 0.65)));
+    leaves.setAttribute("fill", leafColor);
+    leaves.setAttribute("opacity", plant.alive ? "0.95" : "0.65");
+    leaves.dataset.plantId = String(plant.plant_id);
+    svg.append(leaves);
+  }
+
+  return svg;
+}
+
 export function renderNurseryApp(
   target: HTMLElement,
   world: NurseryWorld,
@@ -109,7 +166,7 @@ export function renderNurseryApp(
     list.append(item);
   }
 
-  target.append(heading, status, list);
+  target.append(heading, status, renderNurseryScene(plants), list);
 }
 
 export function renderLoadError(target: HTMLElement, detail: string): void {
@@ -329,6 +386,12 @@ export interface SaveSnapshot {
   name: string;
 }
 
+export interface ExportPayload {
+  format: string;
+  checkpoint_id: string;
+  archive_base64: string;
+}
+
 export interface NurseryClient {
   load(): Promise<NurseryApi>;
   inspect(plantId: number): Promise<PlantDetail>;
@@ -340,6 +403,8 @@ export interface NurseryClient {
   namedSave(name: string): Promise<void>;
   listSaves(): Promise<SaveSnapshot[]>;
   restore(name: string): Promise<void>;
+  exportSave(): Promise<ExportPayload>;
+  importSave(archiveBase64: string): Promise<void>;
 }
 
 export function readCsrfToken(cookieString: string): string | null {
@@ -480,6 +545,22 @@ export function createApiClient(
     };
   }
 
+  function parseExport(payload: unknown): ExportPayload {
+    if (
+      !isRecord(payload) ||
+      typeof payload["format"] !== "string" ||
+      typeof payload["checkpoint_id"] !== "string" ||
+      typeof payload["archive_base64"] !== "string"
+    ) {
+      throw new Error("unexpected export response shape");
+    }
+    return {
+      format: payload["format"] as string,
+      checkpoint_id: payload["checkpoint_id"] as string,
+      archive_base64: payload["archive_base64"] as string,
+    };
+  }
+
   return {
     async load(): Promise<NurseryApi> {
       const [worldJson, plantsJson] = await Promise.all([
@@ -554,6 +635,16 @@ export function createApiClient(
     async restore(name: string): Promise<void> {
       await postJson("/api/v1/saves/restore", { name }, csrfHeaders());
     },
+    async exportSave(): Promise<ExportPayload> {
+      return parseExport(await postJson("/api/v1/saves/export", {}, csrfHeaders()));
+    },
+    async importSave(archiveBase64: string): Promise<void> {
+      await postJson(
+        "/api/v1/saves/import",
+        { archive_base64: archiveBase64.trim() },
+        csrfHeaders(),
+      );
+    },
   };
 }
 
@@ -571,6 +662,8 @@ export interface ControlCallbacks {
   onCheckpoint(): void;
   onNamedSave(name: string): void;
   onRestore(name: string): void;
+  onExport(): void;
+  onImport(archiveBase64: string): void;
   onRefresh(): void;
 }
 
@@ -580,6 +673,7 @@ export interface ControlContext {
   saves: SaveSnapshot[];
   detail: PlantDetail | null;
   result: string | null;
+  exportArchive: string;
 }
 
 function actionButton(
@@ -742,6 +836,19 @@ export function renderControlPanel(
     document.createTextNode(" "),
     actionButton("Restore", "restore", () => callbacks.onRestore(restoreSelect.value)),
   );
+  const exportBox = document.createElement("textarea");
+  exportBox.rows = 3;
+  exportBox.placeholder = "Export/import archive base64";
+  exportBox.dataset.action = "export-archive";
+  exportBox.value = context.exportArchive;
+  saves.append(
+    document.createTextNode(" "),
+    actionButton("Export", "export", () => callbacks.onExport()),
+    document.createTextNode(" "),
+    exportBox,
+    document.createTextNode(" "),
+    actionButton("Import", "import", () => callbacks.onImport(exportBox.value)),
+  );
   panel.append(saves);
 
   const tools = document.createElement("p");
@@ -769,6 +876,7 @@ export async function mountNurseryApp(
 
   let detail: PlantDetail | null = null;
   let result: string | null = null;
+  let exportArchive = "";
 
   async function refresh(): Promise<void> {
     try {
@@ -815,6 +923,8 @@ export async function mountNurseryApp(
           detail = null;
           void runSimple(`Restored "${name}".`, () => client.restore(name));
         },
+        onExport: () => void exportSave(),
+        onImport: (archiveBase64) => void importSave(archiveBase64),
         onRefresh: () => {
           result = null;
           void refresh();
@@ -826,6 +936,7 @@ export async function mountNurseryApp(
         saves,
         detail,
         result,
+        exportArchive,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "unknown error";
@@ -873,6 +984,34 @@ export async function mountNurseryApp(
     try {
       await action();
       result = label;
+    } catch (error) {
+      result = error instanceof Error ? error.message : "unknown error";
+    }
+    await refresh();
+  }
+
+  async function exportSave(): Promise<void> {
+    try {
+      const exported = await client.exportSave();
+      exportArchive = exported.archive_base64;
+      result = `Exported checkpoint ${exported.checkpoint_id}: ${exported.archive_base64}`;
+    } catch (error) {
+      result = error instanceof Error ? error.message : "unknown error";
+    }
+    await refresh();
+  }
+
+  async function importSave(archiveBase64: string): Promise<void> {
+    if (archiveBase64.trim() === "") {
+      result = "Import archive is required.";
+      await refresh();
+      return;
+    }
+    try {
+      await client.importSave(archiveBase64);
+      result = "Imported archive.";
+      exportArchive = archiveBase64.trim();
+      detail = null;
     } catch (error) {
       result = error instanceof Error ? error.message : "unknown error";
     }

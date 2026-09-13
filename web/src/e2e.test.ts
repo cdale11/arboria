@@ -89,6 +89,12 @@ describe("R1 playable nursery e2e flow", () => {
       namedSave: vi.fn(async () => {}),
       listSaves: vi.fn(async () => [{ name: "before-sale" }]),
       restore: vi.fn(async () => {}),
+      exportSave: vi.fn(async () => ({
+        format: "arboria-current-domain-checkpoint+zip+base64",
+        checkpoint_id: "checkpoint-1",
+        archive_base64: "YXJib3JpYQ==",
+      })),
+      importSave: vi.fn(async () => {}),
     };
     const target = document.createElement("main");
 
@@ -118,9 +124,15 @@ describe("R1 playable nursery e2e flow", () => {
     click(target, "pause");
     click(target, "resume");
     click(target, "checkpoint");
+    click(target, "export");
+    await vi.waitFor(() => expect(client.exportSave).toHaveBeenCalled());
+    const archive = target.querySelector<HTMLTextAreaElement>('[data-action="export-archive"]');
+    archive!.value = "YXJjaGl2ZQ==";
+    click(target, "import");
     await vi.waitFor(() => expect(client.pauseClock).toHaveBeenCalled());
     await vi.waitFor(() => expect(client.resumeClock).toHaveBeenCalled());
     await vi.waitFor(() => expect(client.checkpoint).toHaveBeenCalled());
+    await vi.waitFor(() => expect(client.importSave).toHaveBeenCalledWith("YXJjaGl2ZQ=="));
 
     expect(target.textContent).toContain("Arboria Nursery");
     expect(target.querySelectorAll("button").length).toBeGreaterThan(5);

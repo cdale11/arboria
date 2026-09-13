@@ -16,7 +16,12 @@ no promised control is disabled.
 - Clock: pause, resume, and speed selection (1x, 12x, 48x, 144x) within the
   server-validated 1–144 range.
 - Saves: immediate checkpoint, named save with a required non-empty name,
-  restore from the listed named saves, and manual refresh.
+  restore from the listed named saves, current-domain export/import archive
+  controls, and manual refresh.
+- Rendering: a generated SVG nursery scene projects plant height, canopy size,
+  stress/alive status, and protection state from server projections. It is a
+  visual projection only; simulation, sales, and care do not depend on whether
+  the SVG is rendered.
 - Commands are sent with a fresh UUID, the current world/timeline/epoch
   snapshot (re-fetched per command so post-restore timelines stay valid),
   and the readable CSRF cookie. Missing CSRF fails fast with a reload
@@ -34,7 +39,7 @@ no promised control is disabled.
 
 ## 3. Deferred
 
-Procedural 2.5D rendering, fertilizer flows, companion settings, export,
+Fertilizer flows, companion settings, learner-inclusive export/import,
 keyboard/reduced-motion audits, and physical touch-device validation are not
 implemented. Browser e2e currently uses the locked Vitest/jsdom stack rather
 than native browser binaries.

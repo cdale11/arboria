@@ -76,7 +76,7 @@ Dependency: P0. This is the first playable release, not a skeleton server.
 
 #### Nursery, UI, and economy
 
-- [ ] Implement procedural 2.5D nursery rendering with generated assets and no gameplay dependence on visual level of detail.
+- [x] Implement procedural 2.5D nursery rendering with generated assets and no gameplay dependence on visual level of detail. Evidence: `docs/evidence/R1-ui-controls.md`.
 - [x] Implement usable desktop inspection, care, shop, save, and clock controls. Evidence: `docs/evidence/R1-ui-controls.md`.
 - [x] Implement usable touch inspection and care controls meeting the 44px target and 360px layout requirements, plus plant protection controls. Evidence: `docs/evidence/R1-ui-controls.md`.
 - [x] Implement minimal usable inspection, save, and clock controls for the living nursery. Evidence: `docs/evidence/R1-living-nursery.md`.

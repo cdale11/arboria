@@ -2,6 +2,25 @@
 
 Records delivered work and actual evidence. Planned features belong in [ROADMAP.md](ROADMAP.md), not in claims of implemented behavior.
 
+## 2026-09-14 — R1 generated nursery view and current-domain backups
+
+### Added
+
+- Added a generated SVG nursery scene that projects plant size, stress, alive/dead state, and protection state without affecting simulation or command validation.
+- Added dependency-free current-domain export/import through `/api/v1/saves/export` and `/api/v1/saves/import` using bounded base64 zip archives.
+- Added save UI controls for export/import archives and expanded e2e coverage across backup controls.
+- Added checkpoint archive tests for round-trip validation, extra-entry rejection, invalid-base64 API rejection, and restore from imported protected plant state.
+
+### Evidence and verification
+
+- Targeted during implementation: `python -m pytest tests/unit/app/test_checkpoints.py tests/unit/app/test_shop_api.py` passed with 21 tests.
+- Targeted during implementation: `mypy src tests/unit`, `ruff check ...`, `npm --prefix web run check`, `npm --prefix web run test`, and `npm --prefix web run test:e2e` passed.
+
+### Limitations
+
+- Export/import covers the implemented current domains only. Learner arrays, optimizer, replay, RNG streams, and companion policy state remain unsupported because those systems are not implemented.
+- The generated SVG is a projection, not a full art/rendering engine or performance-validated mobile renderer.
+
 ## 2026-09-14 — R1 launcher gates and protected touch controls
 
 ### Added

@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import os
 import shutil
 import time
 import uuid
+import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -18,6 +20,8 @@ from arboria.sim.clock import ClockState
 from arboria.sim.world_loop import WorldLoopState
 
 CHECKPOINT_FORMAT_VERSION = 1
+EXPORT_FORMAT_VERSION = 1
+MAX_EXPORT_BYTES = 5_000_000
 
 
 @dataclass(frozen=True)
@@ -165,6 +169,91 @@ class CheckpointWriter:
             raise ValueError("checkpoint state hash mismatch")
         return manifest, state
 
+    def export_checkpoint(self, checkpoint_id: str) -> bytes:
+        manifest, state = self.load(checkpoint_id)
+        metadata = {
+            "format_version": EXPORT_FORMAT_VERSION,
+            "kind": "arboria-current-domain-checkpoint",
+            "checkpoint_id": checkpoint_id,
+        }
+        output = io.BytesIO()
+        with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr("arboria-export.json", self._canonical_json(metadata))
+            archive.writestr("manifest.json", self._canonical_json(manifest))
+            archive.writestr("state.json", self._canonical_json(state))
+        payload = output.getvalue()
+        if len(payload) > MAX_EXPORT_BYTES:
+            raise ValueError("export archive is too large")
+        return payload
+
+    def import_checkpoint(self, payload: bytes) -> tuple[CheckpointRecord, dict[str, Any]]:
+        if len(payload) > MAX_EXPORT_BYTES:
+            raise ValueError("import archive is too large")
+        try:
+            with zipfile.ZipFile(io.BytesIO(payload), "r") as archive:
+                names = archive.namelist()
+                expected = {"arboria-export.json", "manifest.json", "state.json"}
+                if set(names) != expected:
+                    raise ValueError("export archive has unexpected entries")
+                for info in archive.infolist():
+                    if info.is_dir() or info.file_size > MAX_EXPORT_BYTES:
+                        raise ValueError("export archive entry is invalid")
+                metadata = json.loads(archive.read("arboria-export.json"))
+                manifest = json.loads(archive.read("manifest.json"))
+                state = json.loads(archive.read("state.json"))
+        except zipfile.BadZipFile as exc:
+            raise ValueError("invalid export archive") from exc
+        if (
+            not isinstance(metadata, dict)
+            or metadata.get("format_version") != EXPORT_FORMAT_VERSION
+        ):
+            raise ValueError("unsupported export format")
+        if metadata.get("kind") != "arboria-current-domain-checkpoint":
+            raise ValueError("unsupported export kind")
+        if not isinstance(manifest, dict) or not isinstance(state, dict):
+            raise ValueError("export JSON must contain objects")
+        checkpoint_id = str(uuid.uuid4())
+        manifest = dict(manifest)
+        manifest["checkpoint_id"] = checkpoint_id
+        manifest["parent_checkpoint_id"] = None
+        manifest["purpose"] = "import"
+        state = dict(state)
+        state["purpose"] = "import"
+        tmp_dir = self.checkpoints_dir / f".{checkpoint_id}.tmp"
+        final_dir = self.checkpoints_dir / checkpoint_id
+        self.checkpoints_dir.mkdir(parents=True, exist_ok=True)
+        tmp_dir.mkdir(mode=0o700)
+        try:
+            state_bytes = self._write_json(tmp_dir / "state.json", state)
+            files = manifest.get("files")
+            if not isinstance(files, list) or len(files) != 1 or not isinstance(files[0], dict):
+                raise ValueError("checkpoint manifest must describe state.json")
+            files[0] = dict(files[0])
+            files[0]["relative_path"] = "state.json"
+            files[0]["size_bytes"] = len(state_bytes)
+            files[0]["sha256"] = hashlib.sha256(state_bytes).hexdigest()
+            manifest["files"] = files
+            manifest_bytes = self._write_json(tmp_dir / "manifest.json", manifest)
+            manifest_hash = hashlib.sha256(manifest_bytes).hexdigest()
+            self._fsync_dir(tmp_dir)
+            os.replace(tmp_dir, final_dir)
+            self._fsync_dir(self.checkpoints_dir)
+        except Exception:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+            raise
+        self.load(checkpoint_id)
+        record = CheckpointRecord(
+            checkpoint_id=checkpoint_id,
+            parent_checkpoint_id=None,
+            sim_tick=int(manifest["sim_tick"]),
+            world_revision=int(manifest["world_revision"]),
+            created_unix_s=int(time.time()),
+            manifest_hash=manifest_hash,
+            status="complete",
+            purpose="manual",
+        )
+        return record, manifest
+
     def fallback_checkpoint_id(self, start_id: str) -> str | None:
         """Walk the parent chain for the first fully loadable checkpoint.
 
@@ -209,8 +298,12 @@ class CheckpointWriter:
         return removed
 
     @staticmethod
+    def _canonical_json(payload: dict[str, Any]) -> str:
+        return json.dumps(payload, sort_keys=True, indent=2)
+
+    @staticmethod
     def _write_json(path: Path, payload: dict[str, Any]) -> bytes:
-        data = json.dumps(payload, sort_keys=True, indent=2).encode("utf-8")
+        data = CheckpointWriter._canonical_json(payload).encode("utf-8")
         with path.open("wb") as handle:
             handle.write(data)
             handle.flush()

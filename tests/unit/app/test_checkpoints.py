@@ -1,5 +1,7 @@
 import hashlib
+import io
 import json
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -64,6 +66,41 @@ def test_checkpoint_reader_rejects_corrupt_state(tmp_path: Path) -> None:
         raise AssertionError("corrupt checkpoint should be rejected")
     except ValueError as exc:
         assert "mismatch" in str(exc)
+
+
+def test_checkpoint_export_import_validates_archive(tmp_path: Path) -> None:
+    store = MetadataStore(tmp_path)
+    metadata = store.initialize_for_process_start()
+    writer = CheckpointWriter(tmp_path)
+    record, _ = writer.create(
+        metadata=metadata,
+        clock=ClockState(sim_time_seconds=600.0, speed=48.0, paused=False),
+        loop=WorldLoopState(2, 2, 600.0),
+        parent_checkpoint_id=None,
+        receipt_count=0,
+    )
+
+    archive = writer.export_checkpoint(record.checkpoint_id)
+    imported, manifest = writer.import_checkpoint(archive)
+    loaded_manifest, loaded_state = writer.load(imported.checkpoint_id)
+
+    assert imported.checkpoint_id != record.checkpoint_id
+    assert manifest["purpose"] == "import"
+    assert loaded_manifest["checkpoint_id"] == imported.checkpoint_id
+    assert loaded_state["loop"]["sim_tick"] == 2
+
+
+def test_checkpoint_import_rejects_extra_archive_entries(tmp_path: Path) -> None:
+    writer = CheckpointWriter(tmp_path)
+    output = io.BytesIO()
+    with zipfile.ZipFile(output, "w") as archive:
+        archive.writestr("arboria-export.json", "{}")
+        archive.writestr("manifest.json", "{}")
+        archive.writestr("state.json", "{}")
+        archive.writestr("../escape", "bad")
+
+    with pytest.raises(ValueError, match="unexpected entries"):
+        writer.import_checkpoint(output.getvalue())
 
 
 def test_checkpoint_cleanup_removes_only_interrupted_generations(tmp_path: Path) -> None:

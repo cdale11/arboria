@@ -159,6 +159,49 @@ def test_protected_plant_cannot_be_sold_until_unprotected(
     assert sold["status"] == "applied"
 
 
+def test_export_import_restore_round_trip_current_domains(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    with TestClient(create_app()) as client:
+        csrf = login(client)
+        protected = submit(client, csrf, "nursery.protect", {"plant_id": 1})
+        exported = client.post(
+            "/api/v1/saves/export", headers={CSRF_HEADER_NAME: csrf}
+        ).json()
+        submit(client, csrf, "nursery.unprotect", {"plant_id": 1})
+        imported = client.post(
+            "/api/v1/saves/import",
+            json={"archive_base64": exported["archive_base64"]},
+            headers={CSRF_HEADER_NAME: csrf},
+        ).json()
+        restored = client.post(
+            "/api/v1/saves/restore",
+            json={"checkpoint_id": imported["checkpoint_id"]},
+            headers={CSRF_HEADER_NAME: csrf},
+        ).json()
+        payload = client.get("/api/v1/plants").json()
+
+    assert protected["status"] == "applied"
+    assert exported["format"] == "arboria-current-domain-checkpoint+zip+base64"
+    assert imported["imported"] is True
+    assert restored["restored"] is True
+    assert payload["nursery"]["protected_plant_ids"] == [1]
+
+
+def test_import_rejects_invalid_archive(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    with TestClient(create_app()) as client:
+        csrf = login(client)
+        response = client.post(
+            "/api/v1/saves/import",
+            json={"archive_base64": "not-valid-base64"},
+            headers={CSRF_HEADER_NAME: csrf},
+        )
+
+    assert response.status_code == 400
+
+
 def test_repeated_sell_of_same_plant_is_rejected(
     monkeypatch: MonkeyPatch, tmp_path: Path
 ) -> None:

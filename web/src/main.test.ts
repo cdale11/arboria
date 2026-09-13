@@ -9,6 +9,7 @@ import {
   readCsrfToken,
   renderDependencyBaseline,
   renderNurseryApp,
+  renderNurseryScene,
   type NurseryApi,
   type NurseryClient,
 } from "./main.ts";
@@ -76,8 +77,17 @@ describe("dependency baseline app", () => {
 
     expect(target.textContent).toContain("Tick 3");
     expect(target.textContent).toContain("Plant 1");
+    expect(target.querySelector('[data-action="nursery-scene"]')).not.toBeNull();
     expect(target.textContent).toContain("Fertilizer input, price forecasting");
     expect(formatPlantSummary).toBeDefined();
+  });
+
+  it("generates a display-only nursery scene from plant projections", () => {
+    const scene = renderNurseryScene(stubApiData().plants);
+
+    expect(scene.getAttribute("role")).toBe("img");
+    expect(scene.querySelectorAll("ellipse[data-plant-id]")).toHaveLength(1);
+    expect(scene.querySelector('line[data-plant-id="1"]')).not.toBeNull();
   });
 
   it("parses nursery API payloads", () => {
@@ -272,6 +282,12 @@ function stubClient(overrides: Partial<NurseryClient> = {}): NurseryClient {
     namedSave: async () => {},
     listSaves: async () => [{ name: "first" }],
     restore: async () => {},
+    exportSave: async () => ({
+      format: "arboria-current-domain-checkpoint+zip+base64",
+      checkpoint_id: "checkpoint-1",
+      archive_base64: "YXJib3JpYQ==",
+    }),
+    importSave: async () => {},
     ...overrides,
   };
 }
@@ -357,6 +373,8 @@ describe("nursery controls", () => {
       "checkpoint",
       "named-save",
       "restore",
+      "export",
+      "import",
       "refresh",
     ]) {
       expect(target.querySelector(`[data-action="${action}"]`)).not.toBeNull();
@@ -467,6 +485,25 @@ describe("nursery controls", () => {
     await vi.waitFor(() => expect(namedSave).toHaveBeenCalledWith("before-sale"));
     clickAction(target, "restore");
     await vi.waitFor(() => expect(restore).toHaveBeenCalledWith("first"));
+  });
+
+  it("exports and imports backup archives", async () => {
+    const exportSave = vi.fn(stubClient().exportSave);
+    const importSave = vi.fn(async () => {});
+    const { target } = await mountedClient({ exportSave, importSave });
+
+    clickAction(target, "export");
+    await vi.waitFor(() => expect(exportSave).toHaveBeenCalled());
+    await vi.waitFor(() =>
+      expect(target.querySelector('[data-action="result"]')?.textContent).toContain(
+        "YXJib3JpYQ==",
+      ),
+    );
+    const archive = target.querySelector<HTMLTextAreaElement>('[data-action="export-archive"]');
+    expect(archive?.value).toBe("YXJib3JpYQ==");
+    archive!.value = "YXJjaGl2ZQ==";
+    clickAction(target, "import");
+    await vi.waitFor(() => expect(importSave).toHaveBeenCalledWith("YXJjaGl2ZQ=="));
   });
 
   it("requires a save name before named saves", async () => {

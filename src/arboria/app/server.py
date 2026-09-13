@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import logging
 import os
@@ -759,6 +761,55 @@ def create_app() -> FastAPI:
             "protected": True,
         }
         return JSONResponse({"snapshot": snapshot, "checkpoint": checkpoint})
+
+    @app.post("/api/v1/saves/export")
+    def export_save(request: Request) -> Response:
+        rejection = require_auth_and_csrf(request)
+        if rejection is not None:
+            return rejection
+        checkpoint = create_checkpoint_payload()
+        try:
+            archive = checkpoint_writer.export_checkpoint(str(checkpoint["checkpoint_id"]))
+        except (OSError, ValueError) as exc:
+            return JSONResponse({"detail": str(exc)}, status_code=500)
+        return JSONResponse(
+            {
+                "format": "arboria-current-domain-checkpoint+zip+base64",
+                "checkpoint_id": checkpoint["checkpoint_id"],
+                "archive_base64": base64.b64encode(archive).decode("ascii"),
+            }
+        )
+
+    @app.post("/api/v1/saves/import")
+    async def import_save(request: Request) -> Response:
+        rejection = require_auth_and_csrf(request)
+        if rejection is not None:
+            return rejection
+        payload = await request.json()
+        if not isinstance(payload, dict) or not isinstance(payload.get("archive_base64"), str):
+            return JSONResponse({"detail": "archive_base64 is required"}, status_code=400)
+        try:
+            archive = base64.b64decode(payload["archive_base64"], validate=True)
+            record, manifest = checkpoint_writer.import_checkpoint(archive)
+        except (binascii.Error, OSError, TypeError, ValueError) as exc:
+            return JSONResponse({"detail": str(exc)}, status_code=400)
+        metadata_store.register_checkpoint(
+            checkpoint_id=record.checkpoint_id,
+            parent_checkpoint_id=record.parent_checkpoint_id,
+            sim_tick=record.sim_tick,
+            world_revision=record.world_revision,
+            created_unix_s=record.created_unix_s,
+            manifest_hash=record.manifest_hash,
+            status=record.status,
+            purpose=record.purpose,
+        )
+        return JSONResponse(
+            {
+                "imported": True,
+                "checkpoint_id": record.checkpoint_id,
+                "manifest": manifest,
+            }
+        )
 
     @app.post("/api/v1/saves/restore")
     async def restore_save(request: Request) -> Response:

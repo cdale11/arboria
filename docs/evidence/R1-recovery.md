@@ -16,10 +16,18 @@
   hidden `.tmp` generation and published with one `os.replace`. A mid-write
   crash leaves only the `.tmp` directory, which startup cleanup removes;
   the active checkpoint and metadata never point at partial state.
+- Current-domain export/import wraps validated checkpoint manifest/state JSON
+  in a bounded base64 zip archive. Import rejects malformed archives, extra
+  entries, oversize entries, unsupported export metadata, and invalid
+  checkpoint hashes before registration or restore.
 
 ## Verification
 
-- `python -m pytest tests/unit` passed with 138 tests, including injected
+- `python -m pytest tests/unit/app/test_checkpoints.py tests/unit/app/test_shop_api.py`
+  passed with 21 tests, including export/import archive round trip, import
+  entry validation, endpoint invalid-base64 rejection, and restoring protected
+  plant state from an imported current-domain archive.
+- Prior full evidence: `python -m pytest tests/unit` passed with 138 tests, including injected
   mid-write `OSError` (no final dir, active unchanged, cleanup removes the
   `.tmp`, next save succeeds), parent-chain fallback past corrupt
   generations, `None` when everything is corrupt, malformed-ID rejection,
@@ -29,5 +37,6 @@
   no residue, and saves working after permissions return.
 - `ruff check .` passed.
 - `mypy src tests/unit` passed.
-- `npm --prefix web run check/test/build` passed (16 frontend tests; no
-  frontend changes in this slice).
+- Current-domain export/import does not include learner arrays, optimizer,
+  replay, RNG streams, or companion policy state because those systems do not
+  exist yet.
