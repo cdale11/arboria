@@ -40,13 +40,13 @@ This is an incident log, not a list of imagined failures. Add entries when an ac
   1,051,200-tick run.
 - **Cause:** The current pure-Python nursery still performs repeated
   full-organ-list work in growth and per-plant assimilation.
-- **Impact:** The target-scale decade-stability gate remains open; no final
-  checkpoint or stability claim was recorded.
-- **Correction:** Preserved the timeout as evidence, retained the passing
-  bounded 50-plant decade test, and documented the remaining bottleneck instead
-  of weakening the gate.
-- **Prevention:** Profile and reduce remaining full-list work before retrying
-  the full target-scale soak; keep timeout outcomes distinct from passes.
+- **Impact:** At that point the target-scale decade-stability gate remained open;
+  no final checkpoint or stability claim was recorded from the timed-out run.
+- **Correction:** Profiled and reduced the remaining full-list work, then reran
+  the same target-scale command successfully in 853.22 seconds. The earlier
+  timeout remains historical evidence; it is not treated as the final result.
+- **Prevention:** Profile before extending soak budgets, and keep timeout
+  outcomes distinct from passes in the evidence record.
 
 ## Anticipated risks — not observed incidents
 

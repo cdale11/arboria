@@ -383,8 +383,9 @@ def advance_nursery(
         indices_by_plant = _organ_indices_by_plant(current)
         params_by_plant: dict[int, SpeciesRecord] = {}
         stress_by_plant: dict[int, float] = {}
-        for plant_id in sorted({organ.plant_id for organ in current}):
-            members = [organ for organ in current if organ.plant_id == plant_id]
+        for plant_id in sorted(indices_by_plant):
+            indices = indices_by_plant[plant_id]
+            members = [current[index] for index in indices]
             root = next(organ for organ in members if organ.parent_id is None)
             if not root.alive:
                 continue
@@ -416,9 +417,7 @@ def advance_nursery(
                 indices_by_plant[plant_id],
             )
             live_root = next(
-                organ
-                for organ in current
-                if organ.plant_id == plant_id and organ.parent_id is None
+                current[index] for index in indices if current[index].parent_id is None
             )
             nutrients = advance_plant_nutrients(
                 zone=current_nutrients[plant_id],
@@ -440,7 +439,7 @@ def advance_nursery(
                 nutrients.root_potassium_kg,
                 indices_by_plant[plant_id],
             )
-            plant_organs = [organ for organ in current if organ.plant_id == plant_id]
+            plant_organs = [current[index] for index in indices]
             assimilated = assimilate_carbon(
                 plant_organs,
                 dt_seconds=BASE_TICK_SECONDS,
@@ -454,13 +453,8 @@ def advance_nursery(
                 ),
             )
             uptake += assimilated.atmospheric_carbon_uptake_kg
-            by_id = {organ.organ_id: organ for organ in assimilated.organs}
-            current = [
-                by_id.get(organ.organ_id, organ)
-                if organ.plant_id == plant_id
-                else organ
-                for organ in current
-            ]
+            for index, organ in zip(indices, assimilated.organs, strict=True):
+                current[index] = organ
             stress_by_plant[plant_id] = min(
                 water.water_stress_factor, nutrients.nutrient_stress_factor
             )

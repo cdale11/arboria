@@ -15,22 +15,24 @@ Records delivered work and actual evidence. Planned features belong in [ROADMAP.
 - `npm --prefix web run test`: 21 passed.
 - `npm --prefix web run test:e2e`: 1 passed.
 - `npm --prefix web run build`
-- `python -m pytest tests/performance -m performance`: 7 passed in 221.05 seconds.
-- 500-plant p95 single-tick latency measured at 98.9 ms on the inspected host;
-  1,000-plant p95 measured at 338.3 ms and remains an open R6-scale limitation.
-- The full 500-plant, 10-sim-year run was attempted with a 900-second budget;
-  the 0.71-second build completed, but the 1,051,200-tick soak timed out and
-  remains an open gate.
+- `python -m pytest tests/performance -m performance`: 7 passed in 126.35 seconds.
+- 500-plant p95 single-tick latency measured at 60.3 ms; 1,000-plant p95
+  measured at 175.3 ms on the inspected host, both below the provisional
+  250-ms target.
+- The full 500-plant, 10-sim-year run completed in 853.22 seconds with finite
+  state, valid water capacity, 42.56 MiB peak RSS, approximately `1e-12 kg`
+  water residual, zero exceptions, and no stall. The 24-real-hour operational
+  soak remains open.
 - Added the marked headless scale/soak harness under `tests/performance/` and
   included it in strict mypy coverage.
 
 ### Performance correction
 
 - Removed redundant whole-organ topology validation and repeated full-list
-  exchange scans from private hot-loop helpers. Public `advance_nursery`
-  boundary validation remains in place; this reduced the profiled 500-plant
-  tick from approximately 2.06 s to 0.097 s without disabling biological
-  activity.
+  exchange/assimilation scans from private hot-loop helpers. Public
+  `advance_nursery` boundary validation remains in place; this reduced the
+  profiled 500-plant tick from approximately 2.06 s to 0.056 s without
+  disabling biological activity.
 
 ## 2026-09-14 — Nursery UI presentation pass
 
