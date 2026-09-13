@@ -2,6 +2,25 @@
 
 Records delivered work and actual evidence. Planned features belong in [ROADMAP.md](ROADMAP.md), not in claims of implemented behavior.
 
+## 2026-09-14 — R1 desktop nursery controls
+
+### Added
+
+- Mounted an interactive browser nursery: per-plant inspect/water/sell, shop buy-water/buy-plant with species selection, clock pause/resume/speed, checkpoint/named-save/restore/refresh, organ detail panel, and receipt/error status reporting.
+- Added a strict API client with CSRF headers, per-command world snapshot refresh, and response-shape validation.
+- Added controls contract documentation and evidence.
+
+### Evidence and verification
+
+- `npm --prefix web run check` passed.
+- `npm --prefix web run test` passed with 16 tests.
+- `npm --prefix web run build` passed.
+- `python -m pytest tests/unit` passed with 128 tests.
+
+### Limitations
+
+- Desktop controls only: no touch-target or small-screen review, no plant protection controls, no procedural 2.5D rendering, no fertilizer flows, no companion settings, and no export exists yet.
+
 ## 2026-09-14 — R1 shop economy baseline
 
 ### Added
