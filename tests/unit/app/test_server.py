@@ -2,7 +2,6 @@ from pathlib import Path
 from typing import cast
 from uuid import uuid4
 
-import pytest
 from fastapi.testclient import TestClient
 from pytest import MonkeyPatch
 from starlette.websockets import WebSocketDisconnect
@@ -16,6 +15,7 @@ from arboria.app.auth import (
     sessions_file,
 )
 from arboria.app.server import create_app
+from arboria.sim.economy import STARTING_CASH_MINOR
 
 
 def configure_auth(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
@@ -294,7 +294,7 @@ def test_startup_removes_interrupted_checkpoint_generation(
     assert not interrupted.exists()
 
 
-def test_startup_rejects_corrupt_active_checkpoint(
+def test_startup_recovers_from_corrupt_active_checkpoint(
     monkeypatch: MonkeyPatch, tmp_path: Path
 ) -> None:
     configure_auth(monkeypatch, tmp_path)
@@ -306,8 +306,73 @@ def test_startup_rejects_corrupt_active_checkpoint(
     state_path = tmp_path / "checkpoints" / checkpoint["checkpoint_id"] / "state.json"
     state_path.write_text("{}", encoding="utf-8")
 
-    with pytest.raises(ValueError, match="mismatch"), TestClient(create_app()):
-        pass
+    with TestClient(create_app()) as recovered:
+        login(recovered)
+        world = recovered.get("/api/v1/world").json()
+        nursery = recovered.get("/api/v1/plants").json()["nursery"]
+
+    assert world["active_checkpoint_id"] != checkpoint["checkpoint_id"]
+    assert nursery["plant_count"] == 2
+    assert nursery["cash_minor"] == STARTING_CASH_MINOR
+
+
+def test_startup_falls_back_to_parent_checkpoint(    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    with TestClient(create_app()) as client:
+        csrf = login(client)
+        first = client.post(
+            "/api/v1/saves/checkpoint", headers={CSRF_HEADER_NAME: csrf}
+        ).json()
+        world = client.get("/api/v1/world").json()
+        bought = client.post(
+            "/api/v1/commands",
+            json=command(
+                world, "shop.buy_plant", {"species_id": "crassula_ovata"}
+            ),
+            headers={CSRF_HEADER_NAME: csrf},
+        )
+        assert bought.json()["status"] == "applied"
+        second = client.post(
+            "/api/v1/saves/checkpoint", headers={CSRF_HEADER_NAME: csrf}
+        ).json()
+    state_path = tmp_path / "checkpoints" / second["checkpoint_id"] / "state.json"
+    state_path.write_text("{}", encoding="utf-8")
+
+    with TestClient(create_app()) as recovered:
+        login(recovered)
+        world = recovered.get("/api/v1/world").json()
+        plants = recovered.get("/api/v1/plants").json()["plants"]
+
+    assert world["active_checkpoint_id"] == first["checkpoint_id"]
+    assert [plant["plant_id"] for plant in plants] == [1, 2]
+
+
+def test_checkpoint_on_read_only_directory_fails_cleanly(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    checkpoints_dir = tmp_path / "checkpoints"
+    checkpoints_dir.mkdir(exist_ok=True)
+    with TestClient(create_app(), raise_server_exceptions=False) as client:
+        csrf = login(client)
+        checkpoints_dir.chmod(0o555)
+        try:
+            failed = client.post(
+                "/api/v1/saves/checkpoint", headers={CSRF_HEADER_NAME: csrf}
+            )
+            assert failed.status_code == 500
+            assert client.get("/api/v1/world").status_code == 200
+            leftovers = [
+                path for path in checkpoints_dir.iterdir() if path.name.startswith(".")
+            ]
+            assert leftovers == []
+        finally:
+            checkpoints_dir.chmod(0o755)
+        recovered = client.post(
+            "/api/v1/saves/checkpoint", headers={CSRF_HEADER_NAME: csrf}
+        )
+        assert recovered.status_code == 200
 
 
 def test_save_listing_requires_authentication(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:

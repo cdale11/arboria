@@ -2,6 +2,28 @@
 
 Records delivered work and actual evidence. Planned features belong in [ROADMAP.md](ROADMAP.md), not in claims of implemented behavior.
 
+## 2026-09-14 — R1 crash recovery, migration, and atomic saves
+
+### Added
+
+- Added startup recovery: corrupt or missing active checkpoints fall back along the manifest parent chain, or boot starter state with the active record cleared, with warning logs.
+- Added versioned nursery migration covering schema versions 1–4 with starter fallbacks; newer stamps are rejected.
+- Added atomic-save failure-injection, fallback-chain, migration, and read-only-directory tests.
+- Updated validation evidence and persistence notes for the new recovery behavior.
+
+### Evidence and verification
+
+- `python -m pytest tests/unit` passed with 138 tests.
+- `ruff check .` passed.
+- `mypy src tests/unit` passed.
+- `npm --prefix web run check` passed.
+- `npm --prefix web run test` passed with 16 tests.
+- `npm --prefix web run build` passed.
+
+### Limitations
+
+- Recovery baseline only: corrupt generations are skipped, never repaired; no repair tooling, import validation, learner/RNG recovery, export/import, or retention exists yet. A read-only data directory still fails saves with HTTP 500 rather than a queued retry.
+
 ## 2026-09-14 — R1 lifecycle controls while paused
 
 ### Added

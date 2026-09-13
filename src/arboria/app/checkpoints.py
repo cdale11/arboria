@@ -161,6 +161,39 @@ class CheckpointWriter:
             raise ValueError("checkpoint state hash mismatch")
         return manifest, state
 
+    def fallback_checkpoint_id(self, start_id: str) -> str | None:
+        """Walk the parent chain for the first fully loadable checkpoint.
+
+        Returns None when no ancestor (including the start) loads cleanly.
+        Corrupt entries are skipped, never repaired or trusted.
+        """
+        seen: set[str] = set()
+        current: str | None = start_id
+        while current is not None and current not in seen:
+            seen.add(current)
+            try:
+                self.load(current)
+            except (FileNotFoundError, ValueError, OSError):
+                current = self._parent_of(current)
+                continue
+            return current
+        return None
+
+    def _parent_of(self, checkpoint_id: str) -> str | None:
+        try:
+            UUID(checkpoint_id)
+        except ValueError:
+            return None
+        manifest_path = self.checkpoints_dir / checkpoint_id / "manifest.json"
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (FileNotFoundError, ValueError, OSError, UnicodeDecodeError):
+            return None
+        if not isinstance(manifest, dict):
+            return None
+        parent = manifest.get("parent_checkpoint_id")
+        return parent if isinstance(parent, str) else None
+
     def cleanup_interrupted_generations(self) -> int:
         if not self.checkpoints_dir.exists():
             return 0

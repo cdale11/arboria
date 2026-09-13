@@ -2,6 +2,9 @@ import hashlib
 import json
 from pathlib import Path
 
+import pytest
+from pytest import MonkeyPatch
+
 from arboria.app.checkpoints import CHECKPOINT_FORMAT_VERSION, CheckpointWriter
 from arboria.app.metadata import MetadataStore
 from arboria.sim.clock import ClockState
@@ -76,3 +79,106 @@ def test_checkpoint_cleanup_removes_only_interrupted_generations(tmp_path: Path)
     assert removed == 1
     assert complete.is_dir()
     assert not interrupted.exists()
+
+
+def make_writer(tmp_path: Path) -> tuple[MetadataStore, CheckpointWriter]:
+    store = MetadataStore(tmp_path)
+    metadata = store.initialize_for_process_start()
+    writer = CheckpointWriter(tmp_path)
+    assert metadata is not None
+    return store, writer
+
+
+def create_chain(tmp_path: Path) -> tuple[CheckpointWriter, str, str]:
+    store = MetadataStore(tmp_path)
+    metadata = store.initialize_for_process_start()
+    writer = CheckpointWriter(tmp_path)
+    clock = ClockState(sim_time_seconds=0.0, speed=48.0, paused=False)
+    loop = WorldLoopState(0, 0, 0.0)
+    parent, _ = writer.create(
+        metadata=metadata,
+        clock=clock,
+        loop=loop,
+        parent_checkpoint_id=None,
+        receipt_count=0,
+    )
+    child, _ = writer.create(
+        metadata=metadata,
+        clock=clock,
+        loop=loop,
+        parent_checkpoint_id=parent.checkpoint_id,
+        receipt_count=0,
+    )
+    return writer, parent.checkpoint_id, child.checkpoint_id
+
+
+def corrupt_state(tmp_path: Path, checkpoint_id: str) -> None:
+    (tmp_path / "checkpoints" / checkpoint_id / "state.json").write_text(
+        "{}", encoding="utf-8"
+    )
+
+
+def test_atomic_save_failure_leaves_no_final_dir_and_cleans_up(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    store, writer = make_writer(tmp_path)
+    calls = {"count": 0}
+    original = CheckpointWriter._write_json
+
+    def failing_write(path: Path, payload: dict[str, object]) -> bytes:
+        calls["count"] += 1
+        if calls["count"] == 2:
+            raise OSError("injected disk failure")
+        return original(path, payload)
+
+    monkeypatch.setattr(CheckpointWriter, "_write_json", staticmethod(failing_write))
+    metadata = store.load()
+
+    with pytest.raises(OSError, match="injected disk failure"):
+        writer.create(
+            metadata=metadata,
+            clock=ClockState(sim_time_seconds=0.0, speed=48.0, paused=False),
+            loop=WorldLoopState(0, 0, 0.0),
+            parent_checkpoint_id=None,
+            receipt_count=0,
+        )
+
+    leftovers = [
+        path
+        for path in (tmp_path / "checkpoints").iterdir()
+        if not path.name.startswith(".")
+    ]
+    assert leftovers == []
+    assert store.load().active_checkpoint_id is None
+
+    removed = writer.cleanup_interrupted_generations()
+    assert removed == 1
+
+    monkeypatch.undo()
+    record, _ = writer.create(
+        metadata=store.load(),
+        clock=ClockState(sim_time_seconds=0.0, speed=48.0, paused=False),
+        loop=WorldLoopState(0, 0, 0.0),
+        parent_checkpoint_id=None,
+        receipt_count=0,
+    )
+    assert (tmp_path / "checkpoints" / record.checkpoint_id).is_dir()
+
+
+def test_fallback_walks_parent_chain_past_corrupt_generations(
+    tmp_path: Path,
+) -> None:
+    writer, parent_id, child_id = create_chain(tmp_path)
+
+    assert writer.fallback_checkpoint_id(child_id) == child_id
+    corrupt_state(tmp_path, child_id)
+    assert writer.fallback_checkpoint_id(child_id) == parent_id
+    corrupt_state(tmp_path, parent_id)
+    assert writer.fallback_checkpoint_id(child_id) is None
+
+
+def test_fallback_rejects_unknown_and_malformed_ids(tmp_path: Path) -> None:
+    writer = CheckpointWriter(tmp_path)
+
+    assert writer.fallback_checkpoint_id("00000000-0000-0000-0000-000000000000") is None
+    assert writer.fallback_checkpoint_id("not-a-uuid") is None

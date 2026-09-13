@@ -162,6 +162,21 @@ class MetadataStore:
                 ),
             )
 
+    def point_active_checkpoint(self, checkpoint_id: str | None) -> WorldMetadata:
+        """Repoint the active checkpoint without rotating timeline or epoch.
+
+        Used only by startup recovery after the recorded active checkpoint
+        fails validation; normal saves and restores keep their own paths.
+        """
+        with self._connect() as connection:
+            self._create_schema(connection)
+            connection.execute(
+                "UPDATE worlds SET active_checkpoint_id = ?, updated_at = ? WHERE id = 1",
+                (checkpoint_id, int(time.time())),
+            )
+            connection.commit()
+        return self.load()
+
     def receipt_count(self) -> int:
         with self._connect() as connection:
             self._create_schema(connection)

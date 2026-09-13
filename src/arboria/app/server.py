@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable
@@ -33,13 +34,12 @@ from arboria.sim.nursery import (
     STARTER_RESERVOIR_KG,
     add_starter_plant,
     advance_nursery,
-    nutrient_zones_from_payload,
+    load_nursery_state,
     nutrient_zones_to_payload,
     organs_from_payload,
     organs_to_payload,
     project_plants,
     remove_plant,
-    species_from_payload,
     species_to_payload,
     starter_nutrient_zones,
     starter_organs,
@@ -47,7 +47,6 @@ from arboria.sim.nursery import (
     starter_zones,
     summarize,
     water_plant,
-    zones_from_payload,
     zones_to_payload,
 )
 from arboria.sim.world_loop import WorldLoop, WorldLoopState
@@ -131,6 +130,37 @@ def create_app() -> FastAPI:
     nursery_uptake_kg = 0.0
     nursery_transpired_kg = 0.0
     nursery_drainage_kg = 0.0
+    logger = logging.getLogger("arboria.app.server")
+
+    def recover_nursery_state(
+        state: dict[str, Any], source: str
+    ) -> dict[str, Any] | None:
+        """Load and migrate checkpoint nursery state, recovering from damage.
+
+        Returns None when nothing loadable remains; the caller then boots
+        starter state with the active checkpoint cleared.
+        """
+        nonlocal nursery_organs, nursery_zones, nursery_nutrient_zones
+        nonlocal nursery_species, nursery_economy, nursery_reservoir_kg
+        nonlocal world_metadata
+        try:
+            nursery_organs = organs_from_payload(state.get("nursery_organs", []))
+            loaded = load_nursery_state(state, nursery_organs)
+        except (KeyError, TypeError, ValueError) as exc:
+            logger.warning("unreadable nursery state from %s: %s", source, exc)
+            return None
+        nursery_zones = loaded.zones
+        nursery_nutrient_zones = loaded.nutrient_zones
+        nursery_species = loaded.species_by_plant
+        try:
+            nursery_economy = economy_from_payload(state.get("nursery_economy", {}))
+            nursery_reservoir_kg = float(
+                state.get("nursery_reservoir_kg", STARTER_RESERVOIR_KG)
+            )
+        except (TypeError, ValueError) as exc:
+            logger.warning("unreadable nursery economy from %s: %s", source, exc)
+            return None
+        return state
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
@@ -143,23 +173,42 @@ def create_app() -> FastAPI:
             checkpoint_writer.cleanup_interrupted_generations()
             world_metadata = metadata_store.initialize_for_process_start()
             if world_metadata.active_checkpoint_id is not None:
-                _manifest, state = checkpoint_writer.load(
-                    world_metadata.active_checkpoint_id
-                )
-                nursery_organs = organs_from_payload(state.get("nursery_organs", []))
-                nursery_zones = zones_from_payload(
-                    state.get("nursery_zones", []), nursery_organs
-                )
-                nursery_nutrient_zones = nutrient_zones_from_payload(
-                    state.get("nursery_nutrient_zones", []), nursery_organs
-                )
-                nursery_species = species_from_payload(
-                    state.get("nursery_species", []), nursery_organs
-                )
-                nursery_economy = economy_from_payload(state.get("nursery_economy", {}))
-                nursery_reservoir_kg = float(
-                    state.get("nursery_reservoir_kg", STARTER_RESERVOIR_KG)
-                )
+                active = world_metadata.active_checkpoint_id
+                try:
+                    _manifest, state = checkpoint_writer.load(active)
+                except (FileNotFoundError, ValueError, OSError) as exc:
+                    logger.warning(
+                        "active checkpoint %s failed validation: %s", active, exc
+                    )
+                    state = None
+                    fallback = checkpoint_writer.fallback_checkpoint_id(active)
+                    if fallback is not None:
+                        logger.warning(
+                            "recovering startup from checkpoint %s", fallback
+                        )
+                        world_metadata = metadata_store.point_active_checkpoint(
+                            fallback
+                        )
+                        _manifest, state = checkpoint_writer.load(fallback)
+                    else:
+                        logger.warning(
+                            "no loadable checkpoint; clearing active and "
+                            "booting starter state"
+                        )
+                        world_metadata = metadata_store.point_active_checkpoint(None)
+                if state is not None and (
+                    recover_nursery_state(state, "startup checkpoint") is None
+                ):
+                    logger.warning(
+                        "no loadable nursery state; booting starter state"
+                    )
+                    world_metadata = metadata_store.point_active_checkpoint(None)
+                    nursery_organs = starter_organs()
+                    nursery_zones = starter_zones()
+                    nursery_nutrient_zones = starter_nutrient_zones()
+                    nursery_species = starter_species_by_plant()
+                    nursery_economy = starter_economy()
+                    nursery_reservoir_kg = STARTER_RESERVOIR_KG
             clock = SimulationClock.from_state(world_metadata.clock)
             world_loop = WorldLoop(world_metadata.loop)
             yield
@@ -703,20 +752,15 @@ def create_app() -> FastAPI:
                 consumed_sim_time_seconds=float(loop_state["consumed_sim_time_seconds"]),
             )
             restored_nursery = organs_from_payload(state.get("nursery_organs", []))
-            restored_zones = zones_from_payload(
-                state.get("nursery_zones", []), restored_nursery
-            )
-            restored_nutrient_zones = nutrient_zones_from_payload(
-                state.get("nursery_nutrient_zones", []), restored_nursery
-            )
-            restored_species = species_from_payload(
-                state.get("nursery_species", []), restored_nursery
-            )
+            loaded = load_nursery_state(state, restored_nursery)
+            restored_zones = loaded.zones
+            restored_nutrient_zones = loaded.nutrient_zones
+            restored_species = loaded.species_by_plant
             restored_economy = economy_from_payload(state.get("nursery_economy", {}))
             restored_reservoir = float(
                 state.get("nursery_reservoir_kg", STARTER_RESERVOIR_KG)
             )
-        except (FileNotFoundError, KeyError, TypeError, ValueError) as exc:
+        except (FileNotFoundError, KeyError, OSError, TypeError, ValueError) as exc:
             return JSONResponse({"detail": str(exc)}, status_code=400)
         clock_state = restored_clock.state()
         world_metadata = metadata_store.restore_checkpoint(

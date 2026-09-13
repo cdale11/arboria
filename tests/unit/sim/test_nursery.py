@@ -2,9 +2,11 @@ import pytest
 
 from arboria.biology.nutrients import NutrientZone
 from arboria.sim.nursery import (
+    NURSERY_SCHEMA_VERSION,
     STARTER_RESERVOIR_KG,
     add_starter_plant,
     advance_nursery,
+    load_nursery_state,
     nutrient_zones_from_payload,
     nutrient_zones_to_payload,
     organs_from_payload,
@@ -214,3 +216,56 @@ def test_species_payload_round_trip_and_starter_fallback() -> None:
     unmapped = starter_plant_organs(9, "crassula_ovata", 1)
     with pytest.raises(ValueError, match="no species assigned"):
         species_from_payload([], unmapped)
+
+
+def test_versioned_migration_loads_old_checkpoint_states() -> None:
+    organs = starter_organs()
+    organ_payload = organs_to_payload(organs)
+    restored_organs = organs_from_payload(organ_payload)
+
+    oldest = load_nursery_state(
+        {"nursery_schema_version": 1, "nursery_organs": organ_payload}, restored_organs
+    )
+    assert oldest.zones == starter_zones()
+    assert oldest.nutrient_zones == starter_nutrient_zones()
+    assert oldest.species_by_plant == starter_species_by_plant()
+
+    custom_zones = zones_to_payload({1: 0.05, 2: 0.06})
+    migrated = load_nursery_state(
+        {
+            "nursery_schema_version": 2,
+            "nursery_organs": organ_payload,
+            "nursery_zones": custom_zones,
+        },
+        restored_organs,
+    )
+    assert migrated.zones == {1: 0.05, 2: 0.06}
+    assert migrated.nutrient_zones == starter_nutrient_zones()
+
+    full = load_nursery_state(
+        {
+            "nursery_schema_version": NURSERY_SCHEMA_VERSION,
+            "nursery_organs": organ_payload,
+            "nursery_zones": custom_zones,
+            "nursery_nutrient_zones": nutrient_zones_to_payload(
+                starter_nutrient_zones()
+            ),
+            "nursery_species": species_to_payload(starter_species_by_plant()),
+        },
+        restored_organs,
+    )
+    assert full.zones == {1: 0.05, 2: 0.06}
+    assert full.species_by_plant == starter_species_by_plant()
+
+
+def test_versioned_migration_rejects_newer_and_invalid_versions() -> None:
+    organs = starter_organs()
+    organ_payload = organs_to_payload(organs)
+    restored_organs = organs_from_payload(organ_payload)
+
+    for bad_version in (0, -1, NURSERY_SCHEMA_VERSION + 1, "4", True, None):
+        with pytest.raises(ValueError, match="[Vv]ersion"):
+            load_nursery_state(
+                {"nursery_schema_version": bad_version, "nursery_organs": organ_payload},
+                restored_organs,
+            )

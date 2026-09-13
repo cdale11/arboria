@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, replace
+from typing import Any
 
 from arboria.biology.carbon import AssimilationParameters, assimilate_carbon
 from arboria.biology.growth import GrowthDemand, apply_vegetative_growth
@@ -299,6 +300,41 @@ def species_from_payload(payload: object, organs: list[Organ]) -> dict[int, str]
     if sorted(mapping) != plant_ids:
         raise ValueError("nursery species must exist for every plant exactly once")
     return mapping
+
+
+@dataclass(frozen=True)
+class NurseryLoadedState:
+    zones: dict[int, float]
+    nutrient_zones: dict[int, NutrientZone]
+    species_by_plant: dict[int, str]
+
+
+def load_nursery_state(
+    state: dict[str, Any], organs: list[Organ]
+) -> NurseryLoadedState:
+    """Load versioned nursery state with explicit migration to the current schema.
+
+    Older checkpoint states omit keys introduced by later schema versions and
+    fall back to starter values for the recorded plants. States stamped newer
+    than this code are rejected rather than guessed at.
+    """
+    version = state.get("nursery_schema_version", 1)
+    if isinstance(version, bool) or not isinstance(version, int):
+        raise ValueError("nursery_schema_version must be an integer")
+    if version < 1 or version > NURSERY_SCHEMA_VERSION:
+        raise ValueError(
+            f"unsupported nursery schema version: {version} "
+            f"(code supports 1..{NURSERY_SCHEMA_VERSION})"
+        )
+    return NurseryLoadedState(
+        zones=zones_from_payload(state.get("nursery_zones", []), organs),
+        nutrient_zones=nutrient_zones_from_payload(
+            state.get("nursery_nutrient_zones", []), organs
+        ),
+        species_by_plant=species_from_payload(
+            state.get("nursery_species", []), organs
+        ),
+    )
 
 
 def starter_zones() -> dict[int, float]:

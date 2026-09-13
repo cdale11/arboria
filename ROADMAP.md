@@ -60,8 +60,8 @@ Dependency: P0. This is the first playable release, not a skeleton server.
 - [ ] [AI/ML] Implement export/import and consistent world+learner checkpoint protocol.
 - [x] Implement interrupted metadata-checkpoint generation cleanup on startup. Evidence: `docs/evidence/R1-interrupted-checkpoint-cleanup.md`.
 - [x] Implement active metadata-checkpoint validation on startup. Evidence: `docs/evidence/R1-active-checkpoint-validation.md`.
-- [ ] Implement crash/disk-failure recovery and migration protocol.
-- [ ] Add atomic-save failure-injection tests.
+- [x] Implement crash/disk-failure recovery and migration protocol. Evidence: `docs/evidence/R1-recovery.md`.
+- [x] Add atomic-save failure-injection tests. Evidence: `docs/evidence/R1-recovery.md`.
 
 #### Biology and species
 

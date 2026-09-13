@@ -4,7 +4,9 @@
 
 - Added startup validation for the recorded active metadata checkpoint.
 - Startup validates checkpoint file presence, manifest checkpoint ID, `state.json` size, and SHA-256 hash before the app admits clients.
-- Corrupt active metadata checkpoints fail startup clearly instead of being silently ignored.
+- Corrupt active metadata checkpoints are no longer fatal: validation still
+  rejects the damaged generation, but startup now recovers through the
+  parent-chain fallback in `docs/evidence/R1-recovery.md` instead of failing.
 
 ## Evidence
 
@@ -15,4 +17,4 @@
 ## Limitations
 
 - This validates metadata-only active checkpoints.
-- It does not yet offer fallback selection, repair, import validation, disk-full handling, migrations, or complete biology/economy/learner recovery.
+- Fallback selection, repair policy, import validation, disk-full handling, migrations, and complete biology/economy/learner recovery were open at the time; fallback, migration, and failure-injection evidence now lives in `docs/evidence/R1-recovery.md`.
