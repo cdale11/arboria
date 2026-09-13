@@ -22,6 +22,10 @@ no promised control is disabled.
   stress/alive status, and protection state from server projections. It is a
   visual projection only; simulation, sales, and care do not depend on whether
   the SVG is rendered.
+- Presentation: the live status line and plant cards use one formatter for
+  human-facing values: cash is displayed in dollars, short lengths in
+  centimetres, small masses in grams, and species IDs as readable names. Raw
+  minor-unit and scientific-notation values are not shown in primary controls.
 - Commands are sent with a fresh UUID, the current world/timeline/epoch
   snapshot (re-fetched per command so post-restore timelines stay valid),
   and the readable CSRF cookie. Missing CSRF fails fast with a reload
@@ -34,6 +38,9 @@ no promised control is disabled.
 - At narrow widths, controls stack to the available width so primary care,
   shop, clock, and save actions remain reachable without hover-dependent
   interaction.
+- The live app groups the scene, status, care cards, shop, clock, and saves into
+  distinct framed sections so the primary care actions are visually separated
+  from operational controls.
 - This is automated layout-contract coverage only. No physical-device smoke
   test has been run, and no mobile performance claim is made.
 

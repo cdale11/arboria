@@ -56,17 +56,42 @@ export function renderDependencyBaseline(target: HTMLElement): void {
 
 export function formatPlantSummary(plant: PlantSummary): string {
   const health = plant.alive
-    ? `damage ${(plant.damage_fraction * 100).toFixed(1)}%`
-    : "dead";
+    ? `Health: ${(100 - plant.damage_fraction * 100).toFixed(1)}%`
+    : "Status: dead";
   return (
-    `Plant ${plant.plant_id} (${plant.species_id}, ${plant.site_id}): ` +
-    `${plant.organ_count} organs, ` +
-    `stem ${plant.stem_length_m.toFixed(3)} m, ` +
-    `leaf ${plant.leaf_area_m2.toFixed(3)} m2, ` +
-    `reserve C ${plant.reserve_carbon_kg.toExponential(2)} kg, ` +
-    `zone water ${plant.zone_water_kg.toFixed(3)} kg, ` +
-    `zone N ${plant.zone_nitrogen_kg.toExponential(2)} kg, ` +
+    `Plant ${plant.plant_id} · ${formatSpeciesName(plant.species_id)} · ${plant.site_id} · ` +
+    `${plant.organ_count} organs · height ${formatLength(plant.stem_length_m)} · ` +
+    `water ${formatMass(plant.zone_water_kg)} · N ${formatMass(plant.zone_nitrogen_kg)} · ` +
     health
+  );
+}
+
+function formatSpeciesName(speciesId: string): string {
+  return speciesId
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function formatLength(metres: number): string {
+  return metres < 1 ? `${(metres * 100).toFixed(1)} cm` : `${metres.toFixed(2)} m`;
+}
+
+function formatMass(kg: number): string {
+  return kg < 0.1 ? `${(kg * 1000).toFixed(1)} g` : `${kg.toFixed(2)} kg`;
+}
+
+function formatCash(minor: number): string {
+  return `$${(minor / 100).toFixed(2)}`;
+}
+
+function formatNurseryStatus(world: NurseryWorld): string {
+  return (
+    `Tick ${world.sim_tick} · revision ${world.world_revision} · ` +
+    `${world.nursery.plant_count} plants · ${world.nursery.dead_plant_count} dead · ` +
+    `${world.nursery.organ_count} organs · Cash ${formatCash(world.nursery.cash_minor)} · ` +
+    `Water reserve ${world.nursery.reservoir_kg.toFixed(2)} kg · ` +
+    `Fertilizer input, price forecasting, and companion management are not implemented yet.`
   );
 }
 
@@ -188,23 +213,7 @@ export function renderNurseryApp(
   heading.textContent = "Arboria Nursery";
 
   const status = document.createElement("p");
-  status.textContent =
-    `Tick ${world.sim_tick}, revision ${world.world_revision}, ` +
-    `${world.nursery.plant_count} plants, ${world.nursery.organ_count} organs, ` +
-    `${world.nursery.dead_plant_count} dead. ` +
-    `Species: ${world.nursery.species_ids.join(", ")}. ` +
-    `Cash ${(world.nursery.cash_minor / 100).toFixed(2)} ` +
-    `(${world.nursery.cash_minor} minor units), ` +
-    `buyer demand: ${world.nursery.demand_remaining
-      .map((entry) => `${entry.species_id}×${entry.remaining}`)
-      .join(", ")}. ` +
-    `Reserve carbon ${world.nursery.reserve_carbon_kg.toExponential(2)} kg, ` +
-    `zone water ${world.nursery.zone_water_kg.toFixed(3)} kg, ` +
-    `zone N/P/K ${world.nursery.zone_nitrogen_kg.toExponential(2)}/` +
-    `${world.nursery.zone_phosphorus_kg.toExponential(2)}/` +
-    `${world.nursery.zone_potassium_kg.toExponential(2)} kg, ` +
-    `reservoir ${world.nursery.reservoir_kg.toFixed(3)} kg. ` +
-    `Fertilizer input, price forecasting, and companion management are not implemented yet.`;
+  status.textContent = formatNurseryStatus(world);
 
   const list = document.createElement("ul");
   for (const plant of plants) {
@@ -944,12 +953,7 @@ export async function mountNurseryApp(
     try {
       const [api, saves] = await Promise.all([client.load(), client.listSaves()]);
       const lines =
-        `Tick ${api.world.sim_tick}, revision ${api.world.world_revision}, ` +
-        `${api.world.nursery.plant_count} plants, ` +
-        `${api.world.nursery.organ_count} organs, ` +
-        `${api.world.nursery.dead_plant_count} dead. ` +
-        `Cash ${api.world.nursery.cash_minor} minor units, ` +
-        `reservoir ${api.world.nursery.reservoir_kg.toFixed(3)} kg.`;
+        formatNurseryStatus(api.world);
       status.textContent = lines;
       scene.replaceChildren(sceneTitle, renderNurseryScene(api.plants));
       const callbacks: ControlCallbacks = {

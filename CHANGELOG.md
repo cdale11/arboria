@@ -42,6 +42,11 @@ Records delivered work and actual evidence. Planned features belong in [ROADMAP.
   grouped controls, status styling, and narrow-screen layout improvements.
 - Kept all controls and behavior within the existing R1 inspection, care, shop,
   save, clock, and protection scope.
+- Unified live status and plant-card formatting: cash now consistently shows as
+  dollars, short lengths as centimetres, small masses as grams, and species IDs
+  as readable names instead of exposing raw minor units or scientific notation.
+- Frontend verification: `npm --prefix web run check`, 21 frontend tests,
+  e2e, and production build passed.
 
 ## 2026-09-14 — Live 2.5D nursery scene wiring
 
