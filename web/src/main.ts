@@ -79,8 +79,137 @@ export function renderNurseryApp(
   target.append(heading, status, list);
 }
 
+export function renderLoadError(target: HTMLElement, detail: string): void {
+  target.replaceChildren();
+  const heading = document.createElement("h1");
+  heading.textContent = "Arboria Nursery";
+  const status = document.createElement("p");
+  status.textContent = `Nursery data is unavailable: ${detail}`;
+  target.append(heading, status);
+}
+
+export interface NurseryApi {
+  world: NurseryWorld;
+  plants: PlantSummary[];
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function toNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+export function parseNurseryApi(worldJson: unknown, plantsJson: unknown): NurseryApi | null {
+  if (!isRecord(worldJson) || !isRecord(plantsJson)) {
+    return null;
+  }
+  const simTick = toNumber(worldJson["sim_tick"]);
+  const revision = toNumber(worldJson["world_revision"]);
+  const nursery = worldJson["nursery"];
+  const plants = plantsJson["plants"];
+  if (simTick === null || revision === null || !isRecord(nursery) || !Array.isArray(plants)) {
+    return null;
+  }
+  const numbers: (number | null)[] = [
+    toNumber(nursery["plant_count"]),
+    toNumber(nursery["organ_count"]),
+    toNumber(nursery["reserve_carbon_kg"]),
+    toNumber(nursery["structural_carbon_kg"]),
+    toNumber(nursery["atmospheric_carbon_uptake_kg"]),
+    toNumber(nursery["zone_water_kg"]),
+    toNumber(nursery["reservoir_kg"]),
+    toNumber(nursery["transpired_kg"]),
+    toNumber(nursery["drainage_kg"]),
+  ];
+  if (numbers.some((value) => value === null)) {
+    return null;
+  }
+  const parsedPlants: PlantSummary[] = [];
+  for (const entry of plants) {
+    if (!isRecord(entry)) {
+      return null;
+    }
+    const fields: (number | null)[] = [
+      toNumber(entry["plant_id"]),
+      toNumber(entry["organ_count"]),
+      toNumber(entry["leaf_area_m2"]),
+      toNumber(entry["stem_length_m"]),
+      toNumber(entry["reserve_carbon_kg"]),
+      toNumber(entry["structural_carbon_kg"]),
+      toNumber(entry["zone_water_kg"]),
+      toNumber(entry["water_stress_factor"]),
+    ];
+    if (fields.some((value) => value === null)) {
+      return null;
+    }
+    parsedPlants.push({
+      plant_id: fields[0] as number,
+      organ_count: fields[1] as number,
+      leaf_area_m2: fields[2] as number,
+      stem_length_m: fields[3] as number,
+      reserve_carbon_kg: fields[4] as number,
+      structural_carbon_kg: fields[5] as number,
+      zone_water_kg: fields[6] as number,
+      water_stress_factor: fields[7] as number,
+    });
+  }
+  return {
+    world: {
+      sim_tick: simTick,
+      world_revision: revision,
+      nursery: {
+        plant_count: numbers[0] as number,
+        organ_count: numbers[1] as number,
+        reserve_carbon_kg: numbers[2] as number,
+        structural_carbon_kg: numbers[3] as number,
+        atmospheric_carbon_uptake_kg: numbers[4] as number,
+        zone_water_kg: numbers[5] as number,
+        reservoir_kg: numbers[6] as number,
+        transpired_kg: numbers[7] as number,
+        drainage_kg: numbers[8] as number,
+      },
+    },
+    plants: parsedPlants,
+  };
+}
+
+export async function loadNurseryApp(
+  target: HTMLElement,
+  fetcher: typeof fetch = fetch,
+): Promise<void> {
+  const loading = document.createElement("p");
+  loading.textContent = "Loading nursery...";
+  target.replaceChildren(loading);
+  let worldResponse: Response;
+  let plantsResponse: Response;
+  try {
+    [worldResponse, plantsResponse] = await Promise.all([
+      fetcher("/api/v1/world", { credentials: "same-origin" }),
+      fetcher("/api/v1/plants", { credentials: "same-origin" }),
+    ]);
+  } catch {
+    renderLoadError(target, "network request failed");
+    return;
+  }
+  if (!worldResponse.ok || !plantsResponse.ok) {
+    renderLoadError(target, `world ${worldResponse.status}, plants ${plantsResponse.status}`);
+    return;
+  }
+  const parsed = parseNurseryApi(
+    await worldResponse.json(),
+    await plantsResponse.json(),
+  );
+  if (parsed === null) {
+    renderLoadError(target, "unexpected response shape");
+    return;
+  }
+  renderNurseryApp(target, parsed.world, parsed.plants);
+}
+
 const app = document.querySelector<HTMLElement>("#app");
 
 if (app !== null) {
-  renderDependencyBaseline(app);
+  void loadNurseryApp(app);
 }

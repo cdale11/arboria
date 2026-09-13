@@ -20,8 +20,10 @@ Records delivered work and actual evidence. Planned features belong in [ROADMAP.
 - `ruff check .` passed.
 - `mypy src tests/unit` passed.
 - `npm --prefix web run check` passed.
-- `npm --prefix web run test` passed.
+- `npm --prefix web run test` passed with 5 tests.
 - `npm --prefix web run build` passed.
+- Fixed the served page rendering only the dependency-baseline fallback: the frontend bootstrap now fetches `/api/v1/world` and `/api/v1/plants` and renders live nursery projections with honest fetch-failure messaging.
+- Live smoke test verified authenticated `/api/v1/plants` returns the starter nursery and authenticated `/` serves the rebuilt bundle containing the nursery loader.
 
 ### Limitations
 

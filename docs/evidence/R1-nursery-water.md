@@ -18,8 +18,9 @@
 - `ruff check .` passed.
 - `mypy src tests/unit` passed.
 - `npm --prefix web run check` passed.
-- `npm --prefix web run test` passed.
+- `npm --prefix web run test` passed with 5 tests.
 - `npm --prefix web run build` passed.
+- Live smoke test: authenticated `/api/v1/plants` returned 2 plants/6 organs with zone water; authenticated `/` served the built bundle containing the nursery loader.
 
 ## Limitations
 
