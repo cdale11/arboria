@@ -7,11 +7,11 @@ the authenticated JSON API. Every control calls a real endpoint and reports
 the receipt or error honestly in a status region; no button is decorative and
 no promised control is disabled.
 
-- Care per plant: inspect (organ kind, alive, damage detail), water 0.02 kg
+- Care per plant: inspect (organ kind, alive, damage detail), water 20 mL
   via `nursery.water`, protect/unprotect via `nursery.protect` and
   `nursery.unprotect`, and sell via `shop.sell_plant`. Protected plants are
   rejected by server validation if sold before unprotection.
-- Shop: buy 0.5 kg reservoir water via `shop.buy_water`; buy a plant of the
+- Shop: buy 500 mL reservoir water via `shop.buy_water`; buy a plant of the
   selected demanded species via `shop.buy_plant`.
 - Companion: view baseline caretaker status, turn it on/off, and request a
   bounded care check. The caretaker proposes only validated watering actions;
@@ -27,8 +27,9 @@ no promised control is disabled.
   the SVG is rendered.
 - Presentation: the live status line and plant cards use one formatter for
   human-facing values: cash is displayed in dollars, short lengths in
-  centimetres, small masses in grams, and species IDs as readable names. Raw
-  minor-unit and scientific-notation values are not shown in primary controls.
+  centimetres, water in millilitres/litres, small nutrient masses in grams, and
+  species IDs as readable names. Raw minor-unit, kilogram water payload, and
+  scientific-notation values are not shown in primary controls.
 - Commands are sent with a fresh UUID, the current world/timeline/epoch
   snapshot (re-fetched per command so post-restore timelines stay valid),
   and the readable CSRF cookie. Missing CSRF fails fast with a reload
@@ -44,6 +45,8 @@ no promised control is disabled.
 - The live app groups the scene, status, care cards, shop, clock, and saves into
   distinct framed sections so the primary care actions are visually separated
   from operational controls.
+- A compact overview dashboard keeps cash, tank volume, living plant count, and
+  nursery time visible before the scene and care actions.
 - This is automated layout-contract coverage only. No physical-device smoke
   test has been run, and no mobile performance claim is made.
 

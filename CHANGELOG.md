@@ -20,6 +20,20 @@ Records delivered work and actual evidence. Planned features belong in [ROADMAP.
   preference learner. Full authority across all available actions, persisted
   companion policy, learner state, holdout, and ablation evidence remain open.
 
+## 2026-09-14 — Player-facing water and nursery dashboard
+
+### Changed
+
+- Replaced technical water labels with player-facing volume labels: 20 mL for
+  per-plant care, 500 mL for shop water, and mL/L in plant/tank displays.
+- Added a compact nursery dashboard for cash, tank volume, living plants, and
+  nursery time, plus structured plant action cards.
+
+### Evidence and verification
+
+- `npm --prefix web run check`, 23 frontend tests, e2e, and production build
+  passed alongside the 154-test Python suite, Ruff, and mypy.
+
 ## 2026-09-14 — Isometric 2.5D nursery scene
 
 ### Changed

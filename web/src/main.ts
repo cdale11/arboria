@@ -61,7 +61,7 @@ export function formatPlantSummary(plant: PlantSummary): string {
   return (
     `Plant ${plant.plant_id} · ${formatSpeciesName(plant.species_id)} · ${plant.site_id} · ` +
     `${plant.organ_count} organs · height ${formatLength(plant.stem_length_m)} · ` +
-    `water ${formatMass(plant.zone_water_kg)} · N ${formatMass(plant.zone_nitrogen_kg)} · ` +
+    `soil water ${formatWaterVolume(plant.zone_water_kg)} · N ${formatMass(plant.zone_nitrogen_kg)} · ` +
     health
   );
 }
@@ -81,18 +81,43 @@ function formatMass(kg: number): string {
   return kg < 0.1 ? `${(kg * 1000).toFixed(1)} g` : `${kg.toFixed(2)} kg`;
 }
 
+export function formatWaterVolume(kg: number): string {
+  const millilitres = kg * 1000;
+  return millilitres < 1000 ? `${millilitres.toFixed(0)} mL` : `${(millilitres / 1000).toFixed(2)} L`;
+}
+
 function formatCash(minor: number): string {
   return `$${(minor / 100).toFixed(2)}`;
 }
 
 function formatNurseryStatus(world: NurseryWorld): string {
   return (
-    `Tick ${world.sim_tick} · revision ${world.world_revision} · ` +
-    `${world.nursery.plant_count} plants · ${world.nursery.dead_plant_count} dead · ` +
-    `${world.nursery.organ_count} organs · Cash ${formatCash(world.nursery.cash_minor)} · ` +
-    `Water reserve ${world.nursery.reservoir_kg.toFixed(2)} kg · ` +
-    `Fertilizer input, price forecasting, and companion management are not implemented yet.`
+    `Nursery updated at tick ${world.sim_tick}. ` +
+    `Fertilizer input, price forecasting, and advanced companion learning are not implemented yet.`
   );
+}
+
+export function renderNurseryDashboard(world: NurseryWorld): HTMLElement {
+  const dashboard = document.createElement("section");
+  dashboard.className = "nursery-dashboard";
+  dashboard.setAttribute("aria-label", "Nursery overview");
+  const metrics: [string, string][] = [
+    ["Cash", formatCash(world.nursery.cash_minor)],
+    ["Water tank", formatWaterVolume(world.nursery.reservoir_kg)],
+    ["Living plants", `${world.nursery.plant_count - world.nursery.dead_plant_count} of ${world.nursery.plant_count}`],
+    ["Nursery time", `Tick ${world.sim_tick}`],
+  ];
+  for (const [label, value] of metrics) {
+    const metric = document.createElement("div");
+    metric.className = "metric-card";
+    const metricLabel = document.createElement("span");
+    metricLabel.textContent = label;
+    const metricValue = document.createElement("strong");
+    metricValue.textContent = value;
+    metric.append(metricLabel, metricValue);
+    dashboard.append(metric);
+  }
+  return dashboard;
 }
 
 export function renderNurseryScene(plants: PlantSummary[]): SVGSVGElement {
@@ -226,7 +251,7 @@ export function renderNurseryApp(
     list.append(item);
   }
 
-  target.append(heading, status, renderNurseryScene(plants), list);
+  target.append(heading, status, renderNurseryDashboard(world), renderNurseryScene(plants), list);
 }
 
 export function renderLoadError(target: HTMLElement, detail: string): void {
@@ -831,16 +856,21 @@ export function renderControlPanel(
   careHeading.textContent = "Care";
   care.append(careHeading);
   for (const plant of context.plants) {
-    const row = document.createElement("p");
+    const row = document.createElement("article");
     row.className = "plant-card";
-    row.textContent = formatPlantSummary(plant) + " ";
-    row.append(
+    const plantHeading = document.createElement("h3");
+    plantHeading.textContent = `Plant ${plant.plant_id} · ${formatSpeciesName(plant.species_id)}`;
+    const plantSummary = document.createElement("p");
+    plantSummary.textContent = formatPlantSummary(plant);
+    const actions = document.createElement("div");
+    actions.className = "plant-actions";
+    actions.append(
       actionButton("Inspect", "inspect", () => callbacks.onInspect(plant.plant_id), {
         plantId: String(plant.plant_id),
       }),
       document.createTextNode(" "),
       actionButton(
-        "Water 0.02 kg",
+        "Water 20 mL",
         "water",
         (button) => {
           button.disabled = true;
@@ -867,6 +897,7 @@ export function renderControlPanel(
         { plantId: String(plant.plant_id) },
       ),
     );
+    row.append(plantHeading, plantSummary, actions);
     care.append(row);
   }
   if (context.detail !== null) {
@@ -895,7 +926,7 @@ export function renderControlPanel(
   const shopHeading = document.createElement("h2");
   shopHeading.textContent = "Shop";
   shop.append(shopHeading);
-  shop.append(actionButton("Buy 0.5 kg water", "buy-water", () => callbacks.onBuyWater()));
+  shop.append(actionButton("Buy 500 mL water", "buy-water", () => callbacks.onBuyWater()));
   const speciesSelect = document.createElement("select");
   speciesSelect.dataset.action = "species-select";
   for (const entry of context.demand) {
@@ -1025,6 +1056,8 @@ export async function mountNurseryApp(
   const status = document.createElement("p");
   status.dataset.action = "status";
   status.textContent = "Loading nursery...";
+  const dashboard = document.createElement("div");
+  dashboard.dataset.action = "nursery-dashboard-slot";
   const scene = document.createElement("div");
   scene.dataset.action = "nursery-scene-slot";
   scene.className = "scene-frame";
@@ -1032,7 +1065,7 @@ export async function mountNurseryApp(
   sceneTitle.textContent = "Living nursery";
   scene.append(sceneTitle);
   const panel = document.createElement("div");
-  target.append(heading, status, scene, panel);
+  target.append(heading, status, dashboard, scene, panel);
 
   let detail: PlantDetail | null = null;
   let result: string | null = null;
@@ -1048,6 +1081,7 @@ export async function mountNurseryApp(
       const lines =
         formatNurseryStatus(api.world);
       status.textContent = lines;
+      dashboard.replaceChildren(renderNurseryDashboard(api.world));
       scene.replaceChildren(sceneTitle, renderNurseryScene(api.plants));
       const callbacks: ControlCallbacks = {
         onInspect: (plantId) => void inspectPlant(plantId),

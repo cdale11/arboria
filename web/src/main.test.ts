@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   createApiClient,
   formatPlantSummary,
+  formatWaterVolume,
   loadNurseryApp,
   mountNurseryApp,
   parseNurseryApi,
@@ -78,8 +79,16 @@ describe("dependency baseline app", () => {
     expect(target.textContent).toContain("Tick 3");
     expect(target.textContent).toContain("Plant 1");
     expect(target.querySelector('[data-action="nursery-scene"]')).not.toBeNull();
+    expect(target.textContent).toContain("$200.00");
+    expect(target.textContent).toContain("2.00 L");
     expect(target.textContent).toContain("Fertilizer input, price forecasting");
     expect(formatPlantSummary).toBeDefined();
+  });
+
+  it("formats player-facing water amounts as volume", () => {
+    expect(formatWaterVolume(0.02)).toBe("20 mL");
+    expect(formatWaterVolume(0.5)).toBe("500 mL");
+    expect(formatWaterVolume(2)).toBe("2.00 L");
   });
 
   it("generates a display-only nursery scene from plant projections", () => {
@@ -354,6 +363,8 @@ describe("nursery controls", () => {
     expect(scene?.querySelectorAll("ellipse[data-plant-id]").length).toBeGreaterThan(1);
     expect(target.querySelector(".scene-frame h2")?.textContent).toBe("Living nursery");
     expect(target.querySelectorAll(".plant-card")).toHaveLength(1);
+    expect(target.textContent).toContain("Water 20 mL");
+    expect(target.textContent).toContain("Buy 500 mL water");
   });
 
   it("reads the CSRF token from cookies", () => {

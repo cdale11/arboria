@@ -24,6 +24,8 @@
   minimum heights on controls for the 360px touch-layout contract. The live
   nursery is presented in a framed scene with responsive plant cards and
   grouped care/shop/clock/save sections.
+- Water-related player controls use volume labels (20 mL care action and 500 mL
+  purchase) while the server retains kilogram accounting and validation.
 - `web/package.json` makes `npm --prefix web run test:e2e` a real locked
   Vitest/jsdom full-flow check instead of a placeholder failure.
 
