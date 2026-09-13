@@ -36,7 +36,8 @@ Dependency: P0. This is the first playable release, not a skeleton server.
 - [x] Implement baseline data-directory process lock preventing two local server owners. Evidence: `docs/evidence/R1-process-lock.md`.
 - [x] Implement authenticated single-world ownership metadata. Evidence: `docs/evidence/R1-world-metadata.md`.
 - [x] Implement bounded command envelope, request epoch, deduplication, validation, and execution receipts. Evidence: `docs/evidence/R1-command-envelope.md`.
-- [ ] Implement bounded WebSocket/server-stream projection protocol and reconnect/resync behavior.
+- [x] Implement bounded WebSocket/server-stream baseline for authenticated world/clock snapshot and ping messages. Evidence: `docs/evidence/R1-stream-baseline.md`.
+- [ ] Implement reconnect/resync behavior for biological projections and revisioned deltas.
 
 #### Time and world lifecycle
 

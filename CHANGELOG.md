@@ -249,3 +249,23 @@ Records delivered work and actual evidence. Planned features belong in [ROADMAP.
 ### Limitations
 
 - Command baseline only: no horticultural command kinds, biological tick queue, WebSocket notifications, receipt expiry policy, checkpoint reconciliation, or save/restore behavior exists yet.
+
+## 2026-09-13 — R1 stream baseline
+
+### Added
+
+- Added authenticated `/api/v1/stream` WebSocket endpoint with same-origin upgrade checks.
+- Added initial world/clock snapshot messages carrying schema version, world/timeline identity, revision fields, request epoch, and clock status.
+- Added bounded inbound message handling with ping/pong support and oversized-message rejection.
+- Added stream API tests for authentication, cross-origin rejection, snapshot contents, ping/pong, and message size limits.
+- Updated health status, README, roadmap, architecture notes, and evidence documentation.
+
+### Evidence and verification
+
+- `python -m pytest tests/unit/app/test_server.py` passed with 19 tests and the documented FastAPI/Starlette `TestClient` deprecation warning.
+- `ruff check src/arboria/app/server.py tests/unit/app/test_server.py` passed.
+- `mypy src tests/unit` passed.
+
+### Limitations
+
+- Stream baseline only: no biological projections, revisioned deltas, reconnect replay, resync recovery, frontend stream consumption, or outbound subscriber queues exist yet.

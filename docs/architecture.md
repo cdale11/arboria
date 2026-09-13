@@ -128,6 +128,8 @@ Read endpoints: `/world`, `/plants/{id}`, `/catalog`, `/shop`, `/companion`, `/s
 
 Stream messages carry `world_id`, `timeline_id`, `revision`, `base_revision`, `kind`, and payload. Deltas are applied only to matching base revisions; otherwise fetch a new snapshot. Bound each subscriber's outbound queue; drop stale deltas and request resync rather than accumulate memory. Detailed inspection subscriptions limit organ payloads.
 
+Current R1 implementation provides `/api/v1/stream` with authenticated and same-origin WebSocket upgrade checks, a bounded 4096-byte inbound message limit, an initial `snapshot` message containing world identity, timeline, request epoch, and clock status, plus `ping`/`pong`. Biological projections, revisioned deltas, reconnect replay, subscriber queues, and resync recovery are not implemented yet.
+
 ## 6. Authentication and single-instance operation
 
 Current baseline first-run password input uses hidden terminal input with confirmation through `run.sh`; noninteractive setup may use `ARBORIA_SETUP_PASSWORD`, and noninteractive startup without configured credentials fails clearly. The current implementation stores a salted PBKDF2-HMAC-SHA256 hash with 600,000 iterations under `var/auth/auth.json`, stores only session-token and CSRF-token SHA-256 digests in `var/auth/sessions.json`, expires sessions after seven days, and never puts tokens in URLs. Future hardening may replace PBKDF2 if a stronger vetted password-hashing package is selected under policy.

@@ -4,6 +4,7 @@ from uuid import uuid4
 
 from fastapi.testclient import TestClient
 from pytest import MonkeyPatch
+from starlette.websockets import WebSocketDisconnect
 
 from arboria.app.auth import (
     COOKIE_NAME,
@@ -37,6 +38,7 @@ def test_health_reports_current_implementation_scope(
     assert payload["implemented"]["authentication"] is True
     assert payload["implemented"]["process_lock"] is True
     assert payload["implemented"]["world_metadata"] is True
+    assert payload["implemented"]["stream_protocol"] is True
     assert payload["implemented"]["simulation"] is False
     assert payload["implemented"]["persistence"] is False
 
@@ -290,3 +292,63 @@ def test_command_endpoint_rejects_invalid_envelope_without_receipt(
         )
 
     assert response.status_code == 400
+
+
+def test_stream_requires_authentication(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    with TestClient(create_app()) as client:
+        try:
+            with client.websocket_connect("/api/v1/stream"):
+                raise AssertionError("unauthenticated websocket should not connect")
+        except WebSocketDisconnect as exc:
+            assert exc.code == 1008
+
+
+def test_stream_rejects_cross_origin_upgrade(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    with TestClient(create_app()) as client:
+        login(client)
+        try:
+            with client.websocket_connect(
+                "/api/v1/stream", headers={"Origin": "http://attacker.invalid"}
+            ):
+                raise AssertionError("cross-origin websocket should not connect")
+        except WebSocketDisconnect as exc:
+            assert exc.code == 1008
+
+
+def test_stream_sends_snapshot_and_pong(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    with TestClient(create_app()) as client:
+        login(client)
+        world = client.get("/api/v1/world").json()
+        with client.websocket_connect("/api/v1/stream") as websocket:
+            snapshot = websocket.receive_json()
+            websocket.send_text('{"kind":"ping"}')
+            pong = websocket.receive_json()
+
+    assert snapshot["schema_version"] == 1
+    assert snapshot["world_id"] == world["world_id"]
+    assert snapshot["timeline_id"] == world["timeline_id"]
+    assert snapshot["kind"] == "snapshot"
+    assert snapshot["payload"]["request_epoch"] == world["request_epoch"]
+    assert snapshot["payload"]["clock"]["speed"] == 48.0
+    assert pong["kind"] == "pong"
+
+
+def test_stream_rejects_oversized_client_message(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    with TestClient(create_app()) as client:
+        login(client)
+        with client.websocket_connect("/api/v1/stream") as websocket:
+            websocket.receive_json()
+            websocket.send_text("x" * 4097)
+            try:
+                websocket.receive_json()
+                raise AssertionError("oversized websocket message should close")
+            except WebSocketDisconnect as exc:
+                assert exc.code == 1009

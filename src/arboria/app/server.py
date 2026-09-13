@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, Request, Response, status
+from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect, status
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -38,6 +38,7 @@ from .process_lock import DataDirectoryLock
 
 MAX_FAILED_LOGINS = 5
 LOGIN_WINDOW_SECONDS = 15 * 60
+MAX_STREAM_MESSAGE_BYTES = 4096
 
 
 def _repo_root() -> Path:
@@ -160,6 +161,16 @@ def create_app() -> FastAPI:
     def is_authenticated(request: Request) -> bool:
         return session_is_valid(request.cookies.get(COOKIE_NAME))
 
+    def websocket_is_authenticated(websocket: WebSocket) -> bool:
+        return session_is_valid(websocket.cookies.get(COOKIE_NAME))
+
+    def websocket_origin_is_allowed(websocket: WebSocket) -> bool:
+        host = websocket.headers.get("host", "")
+        origin = websocket.headers.get("origin")
+        if origin is None:
+            return True
+        return origin in {f"http://{host}", f"https://{host}"}
+
     def client_key(request: Request) -> str:
         forwarded = request.headers.get("x-forwarded-for")
         if forwarded:
@@ -218,6 +229,7 @@ def create_app() -> FastAPI:
                 "process_lock": True,
                 "world_metadata": True,
                 "simulation_clock": True,
+                "stream_protocol": True,
                 "simulation": False,
                 "persistence": False,
                 "companion": False,
@@ -265,6 +277,51 @@ def create_app() -> FastAPI:
         )
         receipt = service.submit(envelope, apply_command)
         return JSONResponse(receipt_payload(receipt))
+
+    @app.websocket("/api/v1/stream")
+    async def stream(websocket: WebSocket) -> None:
+        if not websocket_is_authenticated(websocket) or not websocket_origin_is_allowed(websocket):
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
+        await websocket.accept()
+        metadata = require_world_metadata()
+        await websocket.send_json(
+            {
+                "schema_version": 1,
+                "world_id": metadata.world_id,
+                "timeline_id": metadata.timeline_id,
+                "revision": 0,
+                "base_revision": 0,
+                "kind": "snapshot",
+                "payload": {
+                    "request_epoch": metadata.request_epoch,
+                    "clock": save_clock_status(),
+                },
+            }
+        )
+        try:
+            while True:
+                message = await websocket.receive_text()
+                if len(message.encode("utf-8")) > MAX_STREAM_MESSAGE_BYTES:
+                    await websocket.close(code=status.WS_1009_MESSAGE_TOO_BIG)
+                    return
+                if message == '{"kind":"ping"}':
+                    await websocket.send_json(
+                        {
+                            "schema_version": 1,
+                            "world_id": metadata.world_id,
+                            "timeline_id": metadata.timeline_id,
+                            "revision": 0,
+                            "base_revision": 0,
+                            "kind": "pong",
+                            "payload": {},
+                        }
+                    )
+                else:
+                    await websocket.close(code=status.WS_1003_UNSUPPORTED_DATA)
+                    return
+        except WebSocketDisconnect:
+            return
 
     def require_auth_and_csrf(request: Request) -> JSONResponse | None:
         if not is_authenticated(request):
