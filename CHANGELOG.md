@@ -2,6 +2,31 @@
 
 Records delivered work and actual evidence. Planned features belong in [ROADMAP.md](ROADMAP.md), not in claims of implemented behavior.
 
+## 2026-09-14 — R1 nursery-water baseline
+
+### Added
+
+- Added pure bounded root-zone water kernel with uptake, transpiration, drainage, and stress.
+- Coupled per-plant assimilation water factor to live zone fullness.
+- Added per-plant 0.20 kg zones, finite 2.0 kg reservoir, and receipt-backed `nursery.water` command.
+- Persisted zones/reservoir in checkpoints with restore/startup recovery.
+- Exposed zone water/stress in plant projections and UI totals.
+- Added kernel, tick, watering, API, and persistence tests.
+- Updated roadmap, README, biology/persistence/architecture notes, and evidence documentation.
+
+### Evidence and verification
+
+- `python -m pytest tests/unit` passed with 87 tests.
+- `ruff check .` passed.
+- `mypy src tests/unit` passed.
+- `npm --prefix web run check` passed.
+- `npm --prefix web run test` passed.
+- `npm --prefix web run build` passed.
+
+### Limitations
+
+- Water baseline only: no nutrient uptake/chemistry, layered substrate, waterlogging, rainfall/VPD coupling, stress damage, death, species calibration, economy, companion, irrigation automation, queued resume-time care scheduler, export/import, or retention exists yet.
+
 ## 2026-09-14 — R1 living-nursery baseline
 
 ### Added

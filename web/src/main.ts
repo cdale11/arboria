@@ -5,6 +5,8 @@ export interface PlantSummary {
   stem_length_m: number;
   reserve_carbon_kg: number;
   structural_carbon_kg: number;
+  zone_water_kg: number;
+  water_stress_factor: number;
 }
 
 export interface NurseryWorld {
@@ -16,6 +18,10 @@ export interface NurseryWorld {
     reserve_carbon_kg: number;
     structural_carbon_kg: number;
     atmospheric_carbon_uptake_kg: number;
+    zone_water_kg: number;
+    reservoir_kg: number;
+    transpired_kg: number;
+    drainage_kg: number;
   };
 }
 
@@ -36,7 +42,8 @@ export function formatPlantSummary(plant: PlantSummary): string {
     `Plant ${plant.plant_id}: ${plant.organ_count} organs, ` +
     `stem ${plant.stem_length_m.toFixed(3)} m, ` +
     `leaf ${plant.leaf_area_m2.toFixed(3)} m2, ` +
-    `reserve C ${plant.reserve_carbon_kg.toExponential(2)} kg`
+    `reserve C ${plant.reserve_carbon_kg.toExponential(2)} kg, ` +
+    `zone water ${plant.zone_water_kg.toFixed(3)} kg`
   );
 }
 
@@ -53,8 +60,10 @@ export function renderNurseryApp(
   status.textContent =
     `Tick ${world.sim_tick}, revision ${world.world_revision}, ` +
     `${world.nursery.plant_count} plants, ${world.nursery.organ_count} organs. ` +
-    `Reserve carbon ${world.nursery.reserve_carbon_kg.toExponential(2)} kg. ` +
-    `Water, nutrients, economy, and companion management are not implemented yet.`;
+    `Reserve carbon ${world.nursery.reserve_carbon_kg.toExponential(2)} kg, ` +
+    `zone water ${world.nursery.zone_water_kg.toFixed(3)} kg, ` +
+    `reservoir ${world.nursery.reservoir_kg.toFixed(3)} kg. ` +
+    `Nutrients, economy, and companion management are not implemented yet.`;
 
   const list = document.createElement("ul");
   for (const plant of plants) {

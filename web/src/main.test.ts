@@ -30,6 +30,10 @@ describe("dependency baseline app", () => {
           reserve_carbon_kg: 0.01,
           structural_carbon_kg: 0.036,
           atmospheric_carbon_uptake_kg: 0.00001,
+          zone_water_kg: 0.12,
+          reservoir_kg: 2.0,
+          transpired_kg: 0.0,
+          drainage_kg: 0.0,
         },
       },
       [
@@ -40,13 +44,15 @@ describe("dependency baseline app", () => {
           stem_length_m: 0.18,
           reserve_carbon_kg: 0.01,
           structural_carbon_kg: 0.036,
+          zone_water_kg: 0.12,
+          water_stress_factor: 0.74,
         },
       ],
     );
 
     expect(target.textContent).toContain("Tick 3");
     expect(target.textContent).toContain("Plant 1");
-    expect(target.textContent).toContain("Water, nutrients, economy");
+    expect(target.textContent).toContain("Nutrients, economy");
     expect(formatPlantSummary).toBeDefined();
   });
 });

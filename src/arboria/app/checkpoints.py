@@ -50,6 +50,8 @@ class CheckpointWriter:
         purpose: str = "manual",
         nursery_organs: list[dict[str, Any]] | None = None,
         nursery_schema_version: int = 1,
+        nursery_zones: list[dict[str, Any]] | None = None,
+        nursery_reservoir_kg: float = 0.0,
     ) -> tuple[CheckpointRecord, dict[str, Any]]:
         self.checkpoints_dir.mkdir(parents=True, exist_ok=True)
         checkpoint_id = str(uuid.uuid4())
@@ -76,6 +78,8 @@ class CheckpointWriter:
             "receipt_count": receipt_count,
             "nursery_schema_version": nursery_schema_version,
             "nursery_organs": nursery_organs if nursery_organs is not None else [],
+            "nursery_zones": nursery_zones if nursery_zones is not None else [],
+            "nursery_reservoir_kg": nursery_reservoir_kg,
         }
         state_bytes = self._write_json(tmp_dir / "state.json", state)
         state_hash = hashlib.sha256(state_bytes).hexdigest()
