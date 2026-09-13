@@ -7,6 +7,14 @@ from dataclasses import dataclass, replace
 
 from arboria.biology.carbon import AssimilationParameters, assimilate_carbon
 from arboria.biology.growth import GrowthDemand, apply_vegetative_growth
+from arboria.biology.nutrients import (
+    NutrientParameters,
+    NutrientZone,
+    advance_plant_nutrients,
+    advance_stress_damage,
+    nutrient_stress_factor,
+    validate_nutrient_zone,
+)
 from arboria.biology.organs import (
     Organ,
     OrganKind,
@@ -16,8 +24,8 @@ from arboria.biology.organs import (
 )
 from arboria.biology.water import advance_zone_water, apply_watering
 
-# Provisional R1 forcing/parameters. Water/nutrient factors are fixed at 1.0 and
-# documented as uncalibrated placeholders, not measured species constants.
+# Provisional R1 forcing/parameters. Temperature factors and nutrient reference
+# values are uncalibrated placeholders, not measured species constants.
 BASE_TICK_SECONDS = 300.0
 PAR_W_M2 = 250.0
 ASSIMILATION_PARAMETERS = AssimilationParameters(
@@ -27,7 +35,21 @@ ASSIMILATION_PARAMETERS = AssimilationParameters(
     water_factor=1.0,
     nutrient_factor=1.0,
 )
-NURSERY_SCHEMA_VERSION = 2
+# Provisional R1 nutrient parameters. References match starter root mobile
+# pools; luxury capacity is twice the reference; damage calibration kills a
+# fully starved plant in roughly 3,300 ticks with no recovery pathway.
+NUTRIENT_PARAMETERS = NutrientParameters(
+    uptake_rate_per_s=1.0e-4,
+    reference_nitrogen_kg=0.0010,
+    reference_phosphorus_kg=0.00020,
+    reference_potassium_kg=0.00040,
+    capacity_nitrogen_kg=0.0020,
+    capacity_phosphorus_kg=0.00040,
+    capacity_potassium_kg=0.00080,
+    damage_stress_threshold=0.5,
+    damage_rate_per_s=1.0e-6,
+)
+NURSERY_SCHEMA_VERSION = 3
 # Fixed per-tick structural demand factors. Small enough to keep starter pools
 # positive for many ticks while remaining visible in inspection totals.
 GROWTH_RESERVE_FRACTION = 0.0005
@@ -36,10 +58,14 @@ GROWTH_WATER_FRACTION = 0.01
 GROWTH_NUTRIENT_FRACTION = 0.005
 # Well-mixed R1 root zone per plant. Watering transfers finite reservoir water
 # into a zone; above-capacity water drains as an explicit boundary flux.
+# Substrate N/P/K is finite per plant with no fertilizer input in R1.
 ZONE_CAPACITY_KG = 0.20
 STARTER_ZONE_WATER_KG = 0.12
 STARTER_RESERVOIR_KG = 2.0
 MAX_WATER_PER_COMMAND_KG = 0.05
+STARTER_ZONE_NITROGEN_KG = 0.020
+STARTER_ZONE_PHOSPHORUS_KG = 0.0040
+STARTER_ZONE_POTASSIUM_KG = 0.0080
 
 
 @dataclass(frozen=True)
@@ -52,6 +78,12 @@ class PlantProjection:
     structural_carbon_kg: float
     zone_water_kg: float
     water_stress_factor: float
+    alive: bool
+    damage_fraction: float
+    nutrient_stress_factor: float
+    zone_nitrogen_kg: float
+    zone_phosphorus_kg: float
+    zone_potassium_kg: float
 
 
 @dataclass(frozen=True)
@@ -65,15 +97,21 @@ class NurserySummary:
     reservoir_kg: float
     transpired_kg: float
     drainage_kg: float
+    zone_nitrogen_kg: float
+    zone_phosphorus_kg: float
+    zone_potassium_kg: float
+    dead_plant_count: int
 
 
 @dataclass(frozen=True)
 class NurseryTickResult:
     organs: list[Organ]
     zones: dict[int, float]
+    nutrient_zones: dict[int, NutrientZone]
     uptake_kg: float
     transpired_kg: float
     drainage_kg: float
+    npk_uptake_kg: tuple[float, float, float]
 
 
 def starter_organs() -> list[Organ]:
@@ -159,9 +197,22 @@ def starter_zones() -> dict[int, float]:
     return {plant_id: STARTER_ZONE_WATER_KG for plant_id in (1, 2)}
 
 
+def starter_nutrient_zones() -> dict[int, NutrientZone]:
+    """Create deterministic starter substrate N/P/K for each starter plant."""
+    return {
+        plant_id: NutrientZone(
+            nitrogen_kg=STARTER_ZONE_NITROGEN_KG,
+            phosphorus_kg=STARTER_ZONE_PHOSPHORUS_KG,
+            potassium_kg=STARTER_ZONE_POTASSIUM_KG,
+        )
+        for plant_id in (1, 2)
+    }
+
+
 def advance_nursery(
     organs: list[Organ],
     zones: dict[int, float],
+    nutrient_zones: dict[int, NutrientZone],
     ticks: int,
 ) -> NurseryTickResult:
     """Advance starter biology by whole 300-second ticks, deterministically."""
@@ -169,15 +220,21 @@ def advance_nursery(
         raise ValueError("ticks cannot be negative")
     validate_topology(organs)
     validate_zones(organs, zones)
+    validate_nutrient_zones(organs, nutrient_zones)
     current = list(organs)
     current_zones = dict(zones)
+    current_nutrients = dict(nutrient_zones)
     uptake = 0.0
     transpired = 0.0
     drainage = 0.0
+    npk_uptake = [0.0, 0.0, 0.0]
     for _ in range(ticks):
+        stress_by_plant: dict[int, float] = {}
         for plant_id in sorted({organ.plant_id for organ in current}):
             members = [organ for organ in current if organ.plant_id == plant_id]
             root = next(organ for organ in members if organ.parent_id is None)
+            if not root.alive:
+                continue
             leaf_area = sum(
                 organ.surface_area_m2
                 for organ in members
@@ -196,6 +253,30 @@ def advance_nursery(
             current = _apply_zone_exchange(
                 current, plant_id, water.root_uptake_kg, water.transpiration_kg
             )
+            live_root = next(
+                organ
+                for organ in current
+                if organ.plant_id == plant_id and organ.parent_id is None
+            )
+            nutrients = advance_plant_nutrients(
+                zone=current_nutrients[plant_id],
+                root_nitrogen_kg=live_root.pools.nitrogen_kg,
+                root_phosphorus_kg=live_root.pools.phosphorus_kg,
+                root_potassium_kg=live_root.pools.potassium_kg,
+                dt_seconds=BASE_TICK_SECONDS,
+                parameters=NUTRIENT_PARAMETERS,
+            )
+            current_nutrients[plant_id] = nutrients.zone
+            npk_uptake[0] += nutrients.uptake_nitrogen_kg
+            npk_uptake[1] += nutrients.uptake_phosphorus_kg
+            npk_uptake[2] += nutrients.uptake_potassium_kg
+            current = _apply_nutrient_uptake(
+                current,
+                plant_id,
+                nutrients.root_nitrogen_kg,
+                nutrients.root_phosphorus_kg,
+                nutrients.root_potassium_kg,
+            )
             plant_organs = [organ for organ in current if organ.plant_id == plant_id]
             assimilated = assimilate_carbon(
                 plant_organs,
@@ -206,7 +287,7 @@ def advance_nursery(
                     half_saturation_w_m2=ASSIMILATION_PARAMETERS.half_saturation_w_m2,
                     temperature_factor=ASSIMILATION_PARAMETERS.temperature_factor,
                     water_factor=water.water_stress_factor,
-                    nutrient_factor=ASSIMILATION_PARAMETERS.nutrient_factor,
+                    nutrient_factor=nutrients.nutrient_stress_factor,
                 ),
             )
             uptake += assimilated.atmospheric_carbon_uptake_kg
@@ -217,13 +298,22 @@ def advance_nursery(
                 else organ
                 for organ in current
             ]
+            stress_by_plant[plant_id] = min(
+                water.water_stress_factor, nutrients.nutrient_stress_factor
+            )
         demands = _tick_demands(current)
         if demands:
             grown = apply_vegetative_growth(current, demands)
             current = grown.organs
+        for plant_id, combined in stress_by_plant.items():
+            current = _apply_stress_damage(current, plant_id, combined)
     validate_topology(current)
     validate_zones(current, current_zones)
-    return NurseryTickResult(current, current_zones, uptake, transpired, drainage)
+    validate_nutrient_zones(current, current_nutrients)
+    return NurseryTickResult(
+        current, current_zones, current_nutrients, uptake, transpired, drainage,
+        (npk_uptake[0], npk_uptake[1], npk_uptake[2]),
+    )
 
 
 def water_plant(
@@ -264,15 +354,32 @@ def validate_zones(organs: list[Organ], zones: dict[int, float]) -> None:
             raise ValueError("zone water must stay within capacity")
 
 
+def validate_nutrient_zones(
+    organs: list[Organ], nutrient_zones: dict[int, NutrientZone]
+) -> None:
+    plant_ids = {organ.plant_id for organ in organs}
+    if set(nutrient_zones) != plant_ids:
+        raise ValueError("nutrient zones must exist for every plant exactly once")
+    for zone in nutrient_zones.values():
+        if not isinstance(zone, NutrientZone):
+            raise ValueError("nutrient zones must be NutrientZone records")
+        validate_nutrient_zone(zone)
+
+
 def project_plants(
-    organs: list[Organ], zones: dict[int, float]
+    organs: list[Organ],
+    zones: dict[int, float],
+    nutrient_zones: dict[int, NutrientZone],
 ) -> list[PlantProjection]:
     validate_topology(organs)
     validate_zones(organs, zones)
+    validate_nutrient_zones(organs, nutrient_zones)
     projections: list[PlantProjection] = []
     for plant_id in sorted({organ.plant_id for organ in organs}):
         members = [organ for organ in organs if organ.plant_id == plant_id]
+        root = next(organ for organ in members if organ.parent_id is None)
         zone_fraction = zones[plant_id] / ZONE_CAPACITY_KG
+        nutrient_zone = nutrient_zones[plant_id]
         projections.append(
             PlantProjection(
                 plant_id=plant_id,
@@ -293,6 +400,17 @@ def project_plants(
                 ),
                 zone_water_kg=zones[plant_id],
                 water_stress_factor=max(0.0, min(1.0, 0.35 + 0.65 * zone_fraction)),
+                alive=root.alive,
+                damage_fraction=max(organ.damage_fraction for organ in members),
+                nutrient_stress_factor=nutrient_stress_factor(
+                    root_nitrogen_kg=root.pools.nitrogen_kg,
+                    root_phosphorus_kg=root.pools.phosphorus_kg,
+                    root_potassium_kg=root.pools.potassium_kg,
+                    parameters=NUTRIENT_PARAMETERS,
+                ),
+                zone_nitrogen_kg=nutrient_zone.nitrogen_kg,
+                zone_phosphorus_kg=nutrient_zone.phosphorus_kg,
+                zone_potassium_kg=nutrient_zone.potassium_kg,
             )
         )
     return projections
@@ -301,12 +419,14 @@ def project_plants(
 def summarize(
     organs: list[Organ],
     zones: dict[int, float],
+    nutrient_zones: dict[int, NutrientZone],
     uptake_kg: float = 0.0,
     reservoir_kg: float = 0.0,
     transpired_kg: float = 0.0,
     drainage_kg: float = 0.0,
 ) -> NurserySummary:
     totals = total_resource_pools(organs)
+    roots = {organ.plant_id: organ for organ in organs if organ.parent_id is None}
     return NurserySummary(
         plant_count=len({organ.plant_id for organ in organs}),
         organ_count=len(organs),
@@ -317,6 +437,10 @@ def summarize(
         reservoir_kg=reservoir_kg,
         transpired_kg=transpired_kg,
         drainage_kg=drainage_kg,
+        zone_nitrogen_kg=sum(zone.nitrogen_kg for zone in nutrient_zones.values()),
+        zone_phosphorus_kg=sum(zone.phosphorus_kg for zone in nutrient_zones.values()),
+        zone_potassium_kg=sum(zone.potassium_kg for zone in nutrient_zones.values()),
+        dead_plant_count=sum(1 for root in roots.values() if not root.alive),
     )
 
 
@@ -348,6 +472,105 @@ def zones_from_payload(payload: object, organs: list[Organ]) -> dict[int, float]
 
 def starter_zones_for(organs: list[Organ]) -> dict[int, float]:
     return {plant_id: STARTER_ZONE_WATER_KG for plant_id in sorted({o.plant_id for o in organs})}
+
+
+def starter_nutrient_zones_for(organs: list[Organ]) -> dict[int, NutrientZone]:
+    return {
+        plant_id: NutrientZone(
+            nitrogen_kg=STARTER_ZONE_NITROGEN_KG,
+            phosphorus_kg=STARTER_ZONE_PHOSPHORUS_KG,
+            potassium_kg=STARTER_ZONE_POTASSIUM_KG,
+        )
+        for plant_id in sorted({o.plant_id for o in organs})
+    }
+
+
+def nutrient_zones_to_payload(
+    nutrient_zones: dict[int, NutrientZone],
+) -> list[dict[str, object]]:
+    return [
+        {
+            "plant_id": plant_id,
+            "nitrogen_kg": nutrient_zones[plant_id].nitrogen_kg,
+            "phosphorus_kg": nutrient_zones[plant_id].phosphorus_kg,
+            "potassium_kg": nutrient_zones[plant_id].potassium_kg,
+        }
+        for plant_id in sorted(nutrient_zones)
+    ]
+
+
+def nutrient_zones_from_payload(
+    payload: object, organs: list[Organ]
+) -> dict[int, NutrientZone]:
+    if not isinstance(payload, list) or not payload:
+        return starter_nutrient_zones_for(organs)
+    nutrient_zones: dict[int, NutrientZone] = {}
+    for entry in payload:
+        if not isinstance(entry, dict):
+            raise ValueError("nursery nutrient zone payload must contain objects")
+        try:
+            plant_id = int(entry["plant_id"])
+            zone = NutrientZone(
+                nitrogen_kg=float(entry["nitrogen_kg"]),
+                phosphorus_kg=float(entry["phosphorus_kg"]),
+                potassium_kg=float(entry["potassium_kg"]),
+            )
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(f"invalid nursery nutrient zone payload: {exc}") from exc
+        if plant_id in nutrient_zones:
+            raise ValueError("nursery nutrient zone plant IDs cannot repeat")
+        nutrient_zones[plant_id] = zone
+    validate_nutrient_zones(organs, nutrient_zones)
+    return nutrient_zones
+
+
+def _apply_nutrient_uptake(
+    organs: list[Organ],
+    plant_id: int,
+    nitrogen_kg: float,
+    phosphorus_kg: float,
+    potassium_kg: float,
+) -> list[Organ]:
+    next_organs: list[Organ] = []
+    for organ in organs:
+        if organ.plant_id != plant_id or organ.parent_id is not None:
+            next_organs.append(organ)
+            continue
+        next_organs.append(
+            replace(
+                organ,
+                pools=replace(
+                    organ.pools,
+                    nitrogen_kg=nitrogen_kg,
+                    phosphorus_kg=phosphorus_kg,
+                    potassium_kg=potassium_kg,
+                ),
+            )
+        )
+    validate_topology(next_organs)
+    return next_organs
+
+
+def _apply_stress_damage(
+    organs: list[Organ], plant_id: int, combined_stress: float
+) -> list[Organ]:
+    next_organs: list[Organ] = []
+    for organ in organs:
+        if organ.plant_id != plant_id or not organ.alive:
+            next_organs.append(organ)
+            continue
+        damage = advance_stress_damage(
+            damage_fraction=organ.damage_fraction,
+            alive=True,
+            combined_stress_factor=combined_stress,
+            dt_seconds=BASE_TICK_SECONDS,
+            parameters=NUTRIENT_PARAMETERS,
+        )
+        next_organs.append(
+            replace(organ, damage_fraction=damage.damage_fraction, alive=damage.alive)
+        )
+    validate_topology(next_organs)
+    return next_organs
 
 
 def _apply_zone_exchange(
@@ -450,14 +673,13 @@ def organs_from_payload(payload: object) -> list[Organ]:
 
 def _tick_demands(organs: list[Organ]) -> list[GrowthDemand]:
     demands: list[GrowthDemand] = []
+    roots = {organ.plant_id: organ for organ in organs if organ.parent_id is None}
     for organ in sorted(organs, key=lambda item: item.organ_id):
         if organ.kind not in {OrganKind.STEM, OrganKind.BRANCH} or not organ.alive:
             continue
-        root = next(
-            item
-            for item in organs
-            if item.plant_id == organ.plant_id and item.parent_id is None
-        )
+        root = roots.get(organ.plant_id)
+        if root is None or not root.alive:
+            continue
         carbon = root.pools.reserve_carbon_kg * GROWTH_RESERVE_FRACTION
         if carbon <= 0.0:
             continue

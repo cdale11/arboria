@@ -2,6 +2,31 @@
 
 Records delivered work and actual evidence. Planned features belong in [ROADMAP.md](ROADMAP.md), not in claims of implemented behavior.
 
+## 2026-09-14 — R1 nutrient stress, damage, and death baseline
+
+### Added
+
+- Added pure N/P/K kernel with bounded substrate uptake, Liebig-minimum deficiency stress, irreversible damage, and death.
+- Gave each starter plant finite substrate N/P/K with no fertilizer input; live nutrient stress feeds assimilation.
+- Combined water/nutrient stress below 0.5 accrues organ damage; dead plants stop ticking.
+- Persisted nutrient zones in checkpoints (schema version 3) with restore/startup fallback to starter values.
+- Exposed alive/damage/nutrient state in plant projections, detail endpoint, summaries, and UI.
+- Added kernel, starvation-death, depletion, payload, API, and persistence tests.
+- Updated roadmap, README, biology notes, and evidence documentation.
+
+### Evidence and verification
+
+- `python -m pytest tests/unit` passed with 96 tests.
+- `ruff check .` passed.
+- `mypy src tests/unit` passed.
+- `npm --prefix web run check` passed.
+- `npm --prefix web run test` passed with 5 tests.
+- `npm --prefix web run build` passed.
+
+### Limitations
+
+- Nutrient baseline only: no fertilizer input, layered substrate, waterlogging, damage recovery, rainfall/VPD coupling, species calibration, economy, companion, irrigation automation, export/import, or retention exists yet. All nutrient parameters are provisional, not measured species constants.
+
 ## 2026-09-14 — R1 nursery-water baseline
 
 ### Added

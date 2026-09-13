@@ -7,6 +7,12 @@ export interface PlantSummary {
   structural_carbon_kg: number;
   zone_water_kg: number;
   water_stress_factor: number;
+  alive: boolean;
+  damage_fraction: number;
+  nutrient_stress_factor: number;
+  zone_nitrogen_kg: number;
+  zone_phosphorus_kg: number;
+  zone_potassium_kg: number;
 }
 
 export interface NurseryWorld {
@@ -22,6 +28,10 @@ export interface NurseryWorld {
     reservoir_kg: number;
     transpired_kg: number;
     drainage_kg: number;
+    zone_nitrogen_kg: number;
+    zone_phosphorus_kg: number;
+    zone_potassium_kg: number;
+    dead_plant_count: number;
   };
 }
 
@@ -38,12 +48,17 @@ export function renderDependencyBaseline(target: HTMLElement): void {
 }
 
 export function formatPlantSummary(plant: PlantSummary): string {
+  const health = plant.alive
+    ? `damage ${(plant.damage_fraction * 100).toFixed(1)}%`
+    : "dead";
   return (
     `Plant ${plant.plant_id}: ${plant.organ_count} organs, ` +
     `stem ${plant.stem_length_m.toFixed(3)} m, ` +
     `leaf ${plant.leaf_area_m2.toFixed(3)} m2, ` +
     `reserve C ${plant.reserve_carbon_kg.toExponential(2)} kg, ` +
-    `zone water ${plant.zone_water_kg.toFixed(3)} kg`
+    `zone water ${plant.zone_water_kg.toFixed(3)} kg, ` +
+    `zone N ${plant.zone_nitrogen_kg.toExponential(2)} kg, ` +
+    health
   );
 }
 
@@ -59,11 +74,15 @@ export function renderNurseryApp(
   const status = document.createElement("p");
   status.textContent =
     `Tick ${world.sim_tick}, revision ${world.world_revision}, ` +
-    `${world.nursery.plant_count} plants, ${world.nursery.organ_count} organs. ` +
+    `${world.nursery.plant_count} plants, ${world.nursery.organ_count} organs, ` +
+    `${world.nursery.dead_plant_count} dead. ` +
     `Reserve carbon ${world.nursery.reserve_carbon_kg.toExponential(2)} kg, ` +
     `zone water ${world.nursery.zone_water_kg.toFixed(3)} kg, ` +
+    `zone N/P/K ${world.nursery.zone_nitrogen_kg.toExponential(2)}/` +
+    `${world.nursery.zone_phosphorus_kg.toExponential(2)}/` +
+    `${world.nursery.zone_potassium_kg.toExponential(2)} kg, ` +
     `reservoir ${world.nursery.reservoir_kg.toFixed(3)} kg. ` +
-    `Nutrients, economy, and companion management are not implemented yet.`;
+    `Fertilizer input, economy, and companion management are not implemented yet.`;
 
   const list = document.createElement("ul");
   for (const plant of plants) {
@@ -122,6 +141,10 @@ export function parseNurseryApi(worldJson: unknown, plantsJson: unknown): Nurser
     toNumber(nursery["reservoir_kg"]),
     toNumber(nursery["transpired_kg"]),
     toNumber(nursery["drainage_kg"]),
+    toNumber(nursery["zone_nitrogen_kg"]),
+    toNumber(nursery["zone_phosphorus_kg"]),
+    toNumber(nursery["zone_potassium_kg"]),
+    toNumber(nursery["dead_plant_count"]),
   ];
   if (numbers.some((value) => value === null)) {
     return null;
@@ -140,8 +163,16 @@ export function parseNurseryApi(worldJson: unknown, plantsJson: unknown): Nurser
       toNumber(entry["structural_carbon_kg"]),
       toNumber(entry["zone_water_kg"]),
       toNumber(entry["water_stress_factor"]),
+      toNumber(entry["damage_fraction"]),
+      toNumber(entry["nutrient_stress_factor"]),
+      toNumber(entry["zone_nitrogen_kg"]),
+      toNumber(entry["zone_phosphorus_kg"]),
+      toNumber(entry["zone_potassium_kg"]),
     ];
     if (fields.some((value) => value === null)) {
+      return null;
+    }
+    if (typeof entry["alive"] !== "boolean") {
       return null;
     }
     parsedPlants.push({
@@ -153,6 +184,12 @@ export function parseNurseryApi(worldJson: unknown, plantsJson: unknown): Nurser
       structural_carbon_kg: fields[5] as number,
       zone_water_kg: fields[6] as number,
       water_stress_factor: fields[7] as number,
+      alive: entry["alive"] as boolean,
+      damage_fraction: fields[8] as number,
+      nutrient_stress_factor: fields[9] as number,
+      zone_nitrogen_kg: fields[10] as number,
+      zone_phosphorus_kg: fields[11] as number,
+      zone_potassium_kg: fields[12] as number,
     });
   }
   return {
@@ -169,6 +206,10 @@ export function parseNurseryApi(worldJson: unknown, plantsJson: unknown): Nurser
         reservoir_kg: numbers[6] as number,
         transpired_kg: numbers[7] as number,
         drainage_kg: numbers[8] as number,
+        zone_nitrogen_kg: numbers[9] as number,
+        zone_phosphorus_kg: numbers[10] as number,
+        zone_potassium_kg: numbers[11] as number,
+        dead_plant_count: numbers[12] as number,
       },
     },
     plants: parsedPlants,

@@ -24,9 +24,12 @@ from arboria.sim.nursery import (
     NURSERY_SCHEMA_VERSION,
     STARTER_RESERVOIR_KG,
     advance_nursery,
+    nutrient_zones_from_payload,
+    nutrient_zones_to_payload,
     organs_from_payload,
     organs_to_payload,
     project_plants,
+    starter_nutrient_zones,
     starter_organs,
     starter_zones,
     summarize,
@@ -108,6 +111,7 @@ def create_app() -> FastAPI:
     world_loop = WorldLoop()
     nursery_organs = starter_organs()
     nursery_zones = starter_zones()
+    nursery_nutrient_zones = starter_nutrient_zones()
     nursery_reservoir_kg = STARTER_RESERVOIR_KG
     nursery_uptake_kg = 0.0
     nursery_transpired_kg = 0.0
@@ -116,6 +120,7 @@ def create_app() -> FastAPI:
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         nonlocal clock, world_loop, world_metadata, nursery_organs, nursery_zones
+        nonlocal nursery_nutrient_zones
         nonlocal nursery_reservoir_kg, nursery_uptake_kg, nursery_transpired_kg
         nonlocal nursery_drainage_kg
         lock.acquire()
@@ -129,6 +134,9 @@ def create_app() -> FastAPI:
                 nursery_organs = organs_from_payload(state.get("nursery_organs", []))
                 nursery_zones = zones_from_payload(
                     state.get("nursery_zones", []), nursery_organs
+                )
+                nursery_nutrient_zones = nutrient_zones_from_payload(
+                    state.get("nursery_nutrient_zones", []), nursery_organs
                 )
                 nursery_reservoir_kg = float(
                     state.get("nursery_reservoir_kg", STARTER_RESERVOIR_KG)
@@ -160,15 +168,19 @@ def create_app() -> FastAPI:
         return world_metadata
 
     def tick_world() -> WorldLoopState:
-        nonlocal nursery_organs, nursery_zones, nursery_uptake_kg
+        nonlocal nursery_organs, nursery_zones, nursery_nutrient_zones
+        nonlocal nursery_uptake_kg
         nonlocal nursery_transpired_kg, nursery_drainage_kg
         previous = world_loop.state().sim_tick
         loop = world_loop.drain(clock.state())
         advanced = loop.sim_tick - previous
         if advanced > 0:
-            result = advance_nursery(nursery_organs, nursery_zones, advanced)
+            result = advance_nursery(
+                nursery_organs, nursery_zones, nursery_nutrient_zones, advanced
+            )
             nursery_organs = result.organs
             nursery_zones = result.zones
+            nursery_nutrient_zones = result.nutrient_zones
             nursery_uptake_kg += result.uptake_kg
             nursery_transpired_kg += result.transpired_kg
             nursery_drainage_kg += result.drainage_kg
@@ -179,6 +191,7 @@ def create_app() -> FastAPI:
         summary = summarize(
             nursery_organs,
             nursery_zones,
+            nursery_nutrient_zones,
             uptake_kg=nursery_uptake_kg,
             reservoir_kg=nursery_reservoir_kg,
             transpired_kg=nursery_transpired_kg,
@@ -195,6 +208,10 @@ def create_app() -> FastAPI:
             "reservoir_kg": summary.reservoir_kg,
             "transpired_kg": summary.transpired_kg,
             "drainage_kg": summary.drainage_kg,
+            "zone_nitrogen_kg": summary.zone_nitrogen_kg,
+            "zone_phosphorus_kg": summary.zone_phosphorus_kg,
+            "zone_potassium_kg": summary.zone_potassium_kg,
+            "dead_plant_count": summary.dead_plant_count,
         }
 
     def receipt_payload(receipt: Receipt) -> dict[str, Any]:
@@ -301,6 +318,7 @@ def create_app() -> FastAPI:
             nursery_organs=organs_to_payload(nursery_organs),
             nursery_schema_version=NURSERY_SCHEMA_VERSION,
             nursery_zones=zones_to_payload(nursery_zones),
+            nursery_nutrient_zones=nutrient_zones_to_payload(nursery_nutrient_zones),
             nursery_reservoir_kg=nursery_reservoir_kg,
         )
         metadata_store.register_checkpoint(
@@ -525,6 +543,7 @@ def create_app() -> FastAPI:
     @app.post("/api/v1/saves/restore")
     async def restore_save(request: Request) -> Response:
         nonlocal clock, world_loop, world_metadata, nursery_organs, nursery_zones
+        nonlocal nursery_nutrient_zones
         nonlocal nursery_reservoir_kg, nursery_uptake_kg, nursery_transpired_kg
         nonlocal nursery_drainage_kg
         rejection = require_auth_and_csrf(request)
@@ -562,6 +581,9 @@ def create_app() -> FastAPI:
             restored_zones = zones_from_payload(
                 state.get("nursery_zones", []), restored_nursery
             )
+            restored_nutrient_zones = nutrient_zones_from_payload(
+                state.get("nursery_nutrient_zones", []), restored_nursery
+            )
             restored_reservoir = float(
                 state.get("nursery_reservoir_kg", STARTER_RESERVOIR_KG)
             )
@@ -577,6 +599,7 @@ def create_app() -> FastAPI:
         world_loop = WorldLoop(restored_loop_state)
         nursery_organs = restored_nursery
         nursery_zones = restored_zones
+        nursery_nutrient_zones = restored_nutrient_zones
         nursery_reservoir_kg = restored_reservoir
         nursery_uptake_kg = 0.0
         nursery_transpired_kg = 0.0
@@ -755,8 +778,16 @@ def create_app() -> FastAPI:
                 "structural_carbon_kg": projection.structural_carbon_kg,
                 "zone_water_kg": projection.zone_water_kg,
                 "water_stress_factor": projection.water_stress_factor,
+                "alive": projection.alive,
+                "damage_fraction": projection.damage_fraction,
+                "nutrient_stress_factor": projection.nutrient_stress_factor,
+                "zone_nitrogen_kg": projection.zone_nitrogen_kg,
+                "zone_phosphorus_kg": projection.zone_phosphorus_kg,
+                "zone_potassium_kg": projection.zone_potassium_kg,
             }
-            for projection in project_plants(nursery_organs, nursery_zones)
+            for projection in project_plants(
+                nursery_organs, nursery_zones, nursery_nutrient_zones
+            )
         ]
         return JSONResponse(
             {
@@ -780,7 +811,9 @@ def create_app() -> FastAPI:
             return JSONResponse({"detail": "unknown plant"}, status_code=404)
         projection = next(
             item
-            for item in project_plants(nursery_organs, nursery_zones)
+            for item in project_plants(
+                nursery_organs, nursery_zones, nursery_nutrient_zones
+            )
             if item.plant_id == plant_id
         )
         return JSONResponse(
@@ -788,8 +821,14 @@ def create_app() -> FastAPI:
                 "revision": loop.world_revision,
                 "sim_tick": loop.sim_tick,
                 "plant_id": plant_id,
+                "alive": projection.alive,
+                "damage_fraction": projection.damage_fraction,
                 "zone_water_kg": projection.zone_water_kg,
                 "water_stress_factor": projection.water_stress_factor,
+                "nutrient_stress_factor": projection.nutrient_stress_factor,
+                "zone_nitrogen_kg": projection.zone_nitrogen_kg,
+                "zone_phosphorus_kg": projection.zone_phosphorus_kg,
+                "zone_potassium_kg": projection.zone_potassium_kg,
                 "organs": [
                     entry
                     for entry in organs_to_payload(nursery_organs)

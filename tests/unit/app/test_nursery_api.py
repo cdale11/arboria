@@ -34,10 +34,16 @@ def test_plants_list_reports_starter_nursery(
     assert payload["nursery"]["plant_count"] == 2
     assert payload["nursery"]["organ_count"] == 6
     assert payload["nursery"]["reservoir_kg"] == 2.0
+    assert payload["nursery"]["dead_plant_count"] == 0
+    assert payload["nursery"]["zone_nitrogen_kg"] > 0.0
     assert len(payload["plants"]) == 2
     assert payload["plants"][0]["plant_id"] == 1
     assert payload["plants"][0]["organ_count"] == 3
     assert payload["plants"][0]["zone_water_kg"] > 0.0
+    assert payload["plants"][0]["alive"] is True
+    assert payload["plants"][0]["damage_fraction"] == 0.0
+    assert payload["plants"][0]["nutrient_stress_factor"] > 0.0
+    assert payload["plants"][0]["zone_nitrogen_kg"] > 0.0
 
 
 def test_plant_detail_requires_existing_plant(
@@ -52,6 +58,8 @@ def test_plant_detail_requires_existing_plant(
     assert found.status_code == 200
     assert found.json()["plant_id"] == 1
     assert len(found.json()["organs"]) == 3
+    assert found.json()["alive"] is True
+    assert found.json()["nutrient_stress_factor"] > 0.0
     assert missing.status_code == 404
 
 
@@ -78,7 +86,9 @@ def test_checkpoint_and_restore_preserve_nursery(
     assert restored.status_code == 200
     assert after["nursery"]["plant_count"] == before["nursery"]["plant_count"]
     assert after["nursery"]["organ_count"] == before["nursery"]["organ_count"]
+    assert after["nursery"]["zone_nitrogen_kg"] <= before["nursery"]["zone_nitrogen_kg"]
     assert after["plants"][0]["stem_length_m"] >= before["plants"][0]["stem_length_m"]
+    assert after["plants"][0]["alive"] is True
 
 
 def command(world: dict[str, object], kind: str, payload: dict[str, object]) -> dict[str, object]:

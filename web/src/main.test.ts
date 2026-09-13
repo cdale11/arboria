@@ -36,6 +36,10 @@ describe("dependency baseline app", () => {
           reservoir_kg: 2.0,
           transpired_kg: 0.0,
           drainage_kg: 0.0,
+          zone_nitrogen_kg: 0.02,
+          zone_phosphorus_kg: 0.004,
+          zone_potassium_kg: 0.008,
+          dead_plant_count: 0,
         },
       },
       [
@@ -48,13 +52,19 @@ describe("dependency baseline app", () => {
           structural_carbon_kg: 0.036,
           zone_water_kg: 0.12,
           water_stress_factor: 0.74,
+          alive: true,
+          damage_fraction: 0.0,
+          nutrient_stress_factor: 1.0,
+          zone_nitrogen_kg: 0.02,
+          zone_phosphorus_kg: 0.004,
+          zone_potassium_kg: 0.008,
         },
       ],
     );
 
     expect(target.textContent).toContain("Tick 3");
     expect(target.textContent).toContain("Plant 1");
-    expect(target.textContent).toContain("Nutrients, economy");
+    expect(target.textContent).toContain("Fertilizer input, economy");
     expect(formatPlantSummary).toBeDefined();
   });
 
@@ -73,6 +83,10 @@ describe("dependency baseline app", () => {
           reservoir_kg: 2.0,
           transpired_kg: 0.0,
           drainage_kg: 0.0,
+          zone_nitrogen_kg: 0.02,
+          zone_phosphorus_kg: 0.004,
+          zone_potassium_kg: 0.008,
+          dead_plant_count: 0,
         },
       },
       {
@@ -86,6 +100,12 @@ describe("dependency baseline app", () => {
             structural_carbon_kg: 0.036,
             zone_water_kg: 0.12,
             water_stress_factor: 0.74,
+            alive: true,
+            damage_fraction: 0.0,
+            nutrient_stress_factor: 1.0,
+            zone_nitrogen_kg: 0.02,
+            zone_phosphorus_kg: 0.004,
+            zone_potassium_kg: 0.008,
           },
         ],
       },
@@ -111,6 +131,10 @@ describe("dependency baseline app", () => {
         reservoir_kg: 2.0,
         transpired_kg: 0.0,
         drainage_kg: 0.0,
+        zone_nitrogen_kg: 0.02,
+        zone_phosphorus_kg: 0.004,
+        zone_potassium_kg: 0.008,
+        dead_plant_count: 0,
       },
     };
     const plants = {
@@ -124,6 +148,12 @@ describe("dependency baseline app", () => {
           structural_carbon_kg: 0.036,
           zone_water_kg: 0.12,
           water_stress_factor: 0.74,
+          alive: true,
+          damage_fraction: 0.0,
+          nutrient_stress_factor: 1.0,
+          zone_nitrogen_kg: 0.02,
+          zone_phosphorus_kg: 0.004,
+          zone_potassium_kg: 0.008,
         },
       ],
     };
