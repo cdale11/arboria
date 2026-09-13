@@ -99,6 +99,8 @@ def create_app() -> FastAPI:
         try:
             checkpoint_writer.cleanup_interrupted_generations()
             world_metadata = metadata_store.initialize_for_process_start()
+            if world_metadata.active_checkpoint_id is not None:
+                checkpoint_writer.load(world_metadata.active_checkpoint_id)
             clock = SimulationClock.from_state(world_metadata.clock)
             world_loop = WorldLoop(world_metadata.loop)
             yield

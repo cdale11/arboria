@@ -57,6 +57,7 @@ Dependency: P0. This is the first playable release, not a skeleton server.
 - [x] Implement metadata-only autosave checkpoints and status. Evidence: `docs/evidence/R1-metadata-autosave.md`.
 - [ ] [AI/ML] Implement export/import and consistent world+learner checkpoint protocol.
 - [x] Implement interrupted metadata-checkpoint generation cleanup on startup. Evidence: `docs/evidence/R1-interrupted-checkpoint-cleanup.md`.
+- [x] Implement active metadata-checkpoint validation on startup. Evidence: `docs/evidence/R1-active-checkpoint-validation.md`.
 - [ ] Implement crash/disk-failure recovery and migration protocol.
 - [ ] Add atomic-save failure-injection tests.
 

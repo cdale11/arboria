@@ -420,3 +420,22 @@ Records delivered work and actual evidence. Planned features belong in [ROADMAP.
 ### Limitations
 
 - Cleanup baseline only: active-checkpoint corruption handling, disk-full behavior, migration tooling, restore fallback selection, retention, and failure-injection tests remain unimplemented.
+
+## 2026-09-13 — R1 active-checkpoint validation baseline
+
+### Added
+
+- Added startup validation for the recorded active metadata checkpoint.
+- Startup now verifies active checkpoint file presence, manifest checkpoint ID, `state.json` size, and SHA-256 hash before admitting clients.
+- Added tests proving corrupt active checkpoint state fails startup clearly.
+- Updated roadmap, persistence notes, and evidence documentation.
+
+### Evidence and verification
+
+- `python -m pytest tests/unit/app/test_checkpoints.py tests/unit/app/test_server.py` passed with 36 tests and the documented FastAPI/Starlette `TestClient` deprecation warning.
+- `ruff check src/arboria/app/server.py tests/unit/app/test_server.py` passed.
+- `mypy src tests/unit` passed.
+
+### Limitations
+
+- Active-checkpoint validation baseline only: fallback selection, repair, import validation, disk-full handling, migrations, and complete biology/economy/learner recovery remain unimplemented.

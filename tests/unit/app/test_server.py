@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import cast
 from uuid import uuid4
 
+import pytest
 from fastapi.testclient import TestClient
 from pytest import MonkeyPatch
 from starlette.websockets import WebSocketDisconnect
@@ -291,6 +292,22 @@ def test_startup_removes_interrupted_checkpoint_generation(
         login(client)
 
     assert not interrupted.exists()
+
+
+def test_startup_rejects_corrupt_active_checkpoint(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    configure_auth(monkeypatch, tmp_path)
+    with TestClient(create_app()) as client:
+        csrf = login(client)
+        checkpoint = client.post(
+            "/api/v1/saves/checkpoint", headers={CSRF_HEADER_NAME: csrf}
+        ).json()
+    state_path = tmp_path / "checkpoints" / checkpoint["checkpoint_id"] / "state.json"
+    state_path.write_text("{}", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="mismatch"), TestClient(create_app()):
+        pass
 
 
 def test_save_listing_requires_authentication(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
