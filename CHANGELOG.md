@@ -481,3 +481,23 @@ Records delivered work and actual evidence. Planned features belong in [ROADMAP.
 ### Limitations
 
 - Vegetative-growth baseline only: no photosynthesis, root/substrate uptake, light model, nutrient chemistry, organ initiation, stress/damage/death, species grammars, persistence integration, commands, or UI exists yet.
+
+## 2026-09-13 — R1 carbon-assimilation baseline
+
+### Added
+
+- Added pure bounded light-driven carbon assimilation kernel for live leaf cohorts.
+- Added provisional saturating irradiance response with bounded temperature, water, and nutrient factors.
+- Added atmospheric carbon uptake reporting and reserve-carbon additions to plant root pools.
+- Added tests for assimilation amount, stress-factor scaling, dead/no-leaf behavior, noncarbon material preservation, and invalid inputs.
+- Updated roadmap, biology docs, and evidence documentation.
+
+### Evidence and verification
+
+- `python -m pytest tests/unit/biology` passed with 17 tests.
+- `ruff check src/arboria/biology tests/unit/biology` passed.
+- `mypy src tests/unit` passed.
+
+### Limitations
+
+- Carbon-assimilation baseline only: no canopy shading, root/substrate uptake, nutrient chemistry, respiration, stress, damage, death, species calibration, persistence integration, commands, or UI exists yet.

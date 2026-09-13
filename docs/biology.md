@@ -33,6 +33,8 @@ Implemented R1 baseline biology currently includes pure organ topology validatio
 
 Implemented R1 vegetative growth currently applies resource-bounded elongation to existing structural organs only. Growth demands debit reserve carbon, water, nitrogen, phosphorus, and potassium from the plant root organ, scale all demands by the limiting available resource, add structural carbon and associated material to the target organ, and never create new organs. Light-driven assimilation, root/substrate uptake, allocation priorities, organ initiation, stress responses, death, species grammars, and persistence integration remain unimplemented.
 
+Implemented R1 carbon assimilation currently uses the documented provisional saturating light response for live leaf cohorts. It adds atmospheric carbon uptake to the plant root reserve-carbon pool and reports the boundary flux. Temperature, water, and nutrient response factors are bounded `[0,1]`. This is not a Farquhar, C4, or CAM model. Canopy shading, root/substrate uptake, nutrient chemistry, respiration, stress, damage, death, and species calibration remain unimplemented.
+
 ## 3. Generic update rules
 
 For a conserved pool `x` in kg:

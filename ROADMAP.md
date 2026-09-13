@@ -65,7 +65,8 @@ Dependency: P0. This is the first playable release, not a skeleton server.
 
 - [x] Implement organ topology with stable IDs, acyclic parentage, cohort rules, and explicit resource pools. Evidence: `docs/evidence/R1-organ-topology.md`.
 - [x] Implement baseline causal vegetative development driven by resources rather than decorative branch generation. Evidence: `docs/evidence/R1-vegetative-growth.md`.
-- [ ] Implement light, carbon, water, N/P/K, root-zone environment, stress, damage, and death for R1 coverage.
+- [x] Implement baseline bounded light-driven carbon assimilation for R1 coverage. Evidence: `docs/evidence/R1-carbon-assimilation.md`.
+- [ ] Implement water, N/P/K, root-zone environment, stress, damage, and death for R1 coverage.
 - [ ] Deliver six proposed representative species in outdoor/greenhouse zones with source-backed or explicitly provisional parameter metadata and reviewed scenarios.
 - [ ] Document per-species supported, approximated, deferred, and unsupported processes.
 
