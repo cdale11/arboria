@@ -1,6 +1,6 @@
 # Browser controls contract
 
-## 1. Scope
+## 1. Baseline Scope
 
 The R1 browser app (`web/src/main.ts`) provides usable controls over
 the authenticated JSON API. Every control calls a real endpoint and reports
@@ -35,7 +35,7 @@ no promised control is disabled.
   and the readable CSRF cookie. Missing CSRF fails fast with a reload
   hint. Rejected commands display the server reason.
 
-## 2. Touch layout
+## 2. Baseline Touch Layout
 
 - `web/index.html` enforces a responsive viewport, wrapping text, and 44 CSS
   pixel minimum heights on buttons, inputs, and selects.
@@ -50,9 +50,14 @@ no promised control is disabled.
 - This is automated layout-contract coverage only. No physical-device smoke
   test has been run, and no mobile performance claim is made.
 
-## 3. Deferred
+## 3. Known Baseline Limitations
 
-Fertilizer flows, companion settings, learner-inclusive export/import,
-keyboard/reduced-motion audits, and physical touch-device validation are not
-implemented. Browser e2e currently uses the locked Vitest/jsdom stack rather
-than native browser binaries.
+The baseline is a static generated SVG scene with a long control page; it does
+not provide scene picking, camera navigation, a focused inspector, suggested
+editable care, coherent snapshot state, native-browser visual evidence, or a
+physical touch-device smoke test. Fertilizer flows, companion settings,
+learner-inclusive export/import, keyboard/reduced-motion audits, and automatic
+companion scheduling are also not implemented. Browser e2e currently uses the
+locked Vitest/jsdom stack rather than native browser binaries.
+
+The target and ordered acceptance work are defined in [the R1 UI upgrade plan](r1-ui-upgrade.md).

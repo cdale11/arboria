@@ -83,6 +83,7 @@ These are baseline smoke checks only. The first playable release must supply the
 
 - [Decision register](docs/decisions.md): confirmed choices, engineering defaults, unresolved release gates.
 - [Game design](docs/game-design.md): interaction, calendar, shop, autonomy, and release coverage.
+- [R1 UI upgrade plan](docs/r1-ui-upgrade.md): approved scene-first experience, implementation ownership, and acceptance evidence.
 - [Architecture](docs/architecture.md): module ownership, data structures, tick order, API, concurrency, launch.
 - [Dependency policy](docs/dependencies.md): selected Conda/npm direct dependencies and lock regeneration.
 - [Biology](docs/biology.md): units, numerical contracts, functional–structural modeling, evidence.

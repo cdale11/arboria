@@ -76,9 +76,8 @@ Dependency: P0. This is the first playable release, not a skeleton server.
 
 #### Nursery, UI, and economy
 
-- [x] Implement procedural 2.5D nursery rendering with generated assets and no gameplay dependence on visual level of detail. Evidence: `docs/evidence/R1-ui-controls.md`.
-- [x] Implement usable desktop inspection, care, shop, save, and clock controls. Evidence: `docs/evidence/R1-ui-controls.md`.
-- [x] Implement usable touch inspection and care controls meeting the 44px target and 360px layout requirements, plus plant protection controls. Evidence: `docs/evidence/R1-ui-controls.md`.
+- [ ] [UI-01 through UI-10] Deliver the approved scene-first, detailed-stylized nursery UI, authoritative presentation state, suggested editable care, shop previews, truthful companion controls, backup/recovery, and real-browser desktop/phone acceptance. Full specification and ordered dependencies: `docs/r1-ui-upgrade.md`.
+- [ ] Revalidate the baseline SVG projection and touch layout after the scene-first rebuild; current jsdom/layout evidence does not close this gate. Baseline evidence: `docs/evidence/R1-ui-controls.md`.
 - [x] Implement minimal usable inspection, save, and clock controls for the living nursery. Evidence: `docs/evidence/R1-living-nursery.md`.
 - [x] Implement real inventory, suppliers, purchases, demand-limited plant sales, and finite cash/material accounting. Evidence: `docs/evidence/R1-economy.md`.
 - [x] Add economy tests for transaction consistency, duplicate sales, bounded demand, and anti-arbitrage. Evidence: `docs/evidence/R1-economy.md`.
@@ -91,7 +90,7 @@ Dependency: P0. This is the first playable release, not a skeleton server.
 
 #### Documentation and evidence
 
-- [x] Update README with actual setup/run/control/backup instructions for the playable release. Evidence: `README.md` and `docs/evidence/R1.md`.
+- [ ] Update README with actual setup/run/control/backup instructions after the UI upgrade; current baseline remains documented honestly. Evidence: `README.md` and `docs/evidence/R1.md`.
 - [x] Produce `docs/evidence/R1.md` aggregating final R1 commands, versions, platform, scenario seeds, metrics, failures, limitations, and artifact locations. Evidence: `docs/evidence/R1.md`.
 - [x] Keep CHANGELOG, ROADMAP, docs contracts, and MISTAKES synchronized with every delivered coherent change. Evidence: `CHANGELOG.md` and `docs/evidence/R1.md`.
 

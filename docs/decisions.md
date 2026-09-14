@@ -20,6 +20,10 @@ Date of baseline: 2026-09-12. Status labels: **confirmed** = user choice; **adop
 | D12 | Save/load includes AI | Complete world and learner checkpoints |
 | D13 | Maintain exhaustive docs and commit/push changes | Mandatory agent workflow |
 | D14 | Clarify uncertainty through question tool | No silent consequential requirement decisions |
+| D15 | Detailed stylized nursery presentation | Visual fidelity is part of the R1 player experience |
+| D16 | Scene-first nursery interaction | Selection and focused inspection are primary; searchable navigation remains an alternative |
+| D17 | Suggested care with editable amount | Server recommendation and preview; player edits before explicit submission |
+| D18 | Equal desktop and phone priority | Both form factors are co-primary acceptance paths |
 
 ## Adopted engineering defaults
 

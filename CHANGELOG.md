@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-09-14 — R1 UI audit and upgrade specification
+
+### Changed
+
+- Added the ordered UI-01 through UI-10 plan in `docs/r1-ui-upgrade.md`.
+- Reopened the broad R1 UI roadmap claim and recorded the four confirmed UI decisions.
+
+### Limitations
+
+- Documentation and scope correction only; no runtime behavior or test result changed.
+
 Records delivered work and actual evidence. Planned features belong in [ROADMAP.md](ROADMAP.md), not in claims of implemented behavior.
 
 ## 2026-09-14 — Baseline caretaker companion

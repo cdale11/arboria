@@ -48,6 +48,16 @@ This is an incident log, not a list of imagined failures. Add entries when an ac
 - **Prevention:** Profile before extending soak budgets, and keep timeout
   outcomes distinct from passes in the evidence record.
 
+## M-006 — Cosmetic UI pass treated as player-ready (2026-09-14)
+
+- **Observed:** Baseline UI polish and jsdom/layout checks were treated as
+  evidence of scene-first usability without scene selection, focused inspection,
+  suggested care, native-browser visual evidence, or physical-device smoke test.
+- **Impact:** R1 UI completion was overstated.
+- **Correction:** Added `docs/r1-ui-upgrade.md`, reopened the roadmap claim, and
+  narrowed `docs/ui-controls.md` to baseline behavior.
+- **Prevention:** Require UI-01 through UI-10 evidence and user visual review.
+
 ## Anticipated risks — not observed incidents
 
 These are design-review reminders, not claims that errors have happened:
