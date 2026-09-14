@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-09-14 — UI-03 phone bottom sheet
+
+- Added the narrow-screen selected-care bottom-sheet presentation with reserved
+  scene space, sticky navigation, and two-column plant selection.
+- Native mobile validation and full panel behavior remain open.
+
+Verification: `npm --prefix web run check` passed; frontend test suite: 30 passed.
+
 ## 2026-09-14 — UI-03 in-place section navigation
 
 - Made persistent Nursery, Plants, Shop, Companion, and Saves navigation switch

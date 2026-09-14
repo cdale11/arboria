@@ -172,6 +172,31 @@
         background: #eef6ed;
       }
 
+      .app-navigation {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        margin: 0.75rem 0;
+      }
+
+      .app-navigation button[aria-current="page"] {
+        color: #fff;
+        border-color: #193d2a;
+        background: #1d5b43;
+      }
+
+      .plant-picker {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        grid-column: 1 / -1;
+      }
+
+      .plant-picker h3 {
+        flex-basis: 100%;
+        margin: 0;
+      }
+
       @media (max-width: 420px) {
         main {
           padding: 0.75rem;
@@ -195,6 +220,68 @@
         .plant-actions {
           display: grid;
           grid-template-columns: 1fr;
+        }
+
+        .app-navigation {
+          position: sticky;
+          top: 0;
+          z-index: 3;
+          margin-inline: -0.75rem;
+          padding: 0.5rem 0.75rem;
+          background: rgb(244 239 228 / 94%);
+          backdrop-filter: blur(0.5rem);
+        }
+
+        .app-navigation button {
+          flex: 1 1 calc(33% - 0.35rem);
+          white-space: nowrap;
+        }
+
+        .scene-frame {
+          margin-bottom: 18rem;
+        }
+
+        .control-section[data-section="nursery"] {
+          position: fixed;
+          right: 0.65rem;
+          bottom: 0.65rem;
+          left: 0.65rem;
+          z-index: 2;
+          max-height: min(46vh, 24rem);
+          margin: 0;
+          overflow: auto;
+          border-color: #9ab7a1;
+          border-radius: 1.1rem;
+          box-shadow: 0 0.75rem 2rem rgb(36 49 38 / 22%);
+        }
+
+        .control-section[data-section="nursery"]::before {
+          display: block;
+          width: 2.5rem;
+          height: 0.25rem;
+          margin: -0.35rem auto 0.65rem;
+          border-radius: 1rem;
+          background: #9ab7a1;
+          content: "";
+        }
+
+        .care-section {
+          display: block;
+        }
+
+        .plant-card {
+          margin-bottom: 0.65rem;
+        }
+
+        .plant-picker {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .plant-picker button {
+          width: 100%;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
       }
     </style>
