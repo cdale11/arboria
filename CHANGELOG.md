@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-09-14 — UI-04 nursery camera controls
+
+- Added bounded zoom/reset controls, wheel zoom, and pointer pan to the nursery
+  scene without connecting camera state to simulation state.
+- Touch pinch and native-browser validation remain open.
+
+Verification: `npm --prefix web run check`, 31 frontend tests, and production build passed.
+
 ## 2026-09-14 — UI-04 scene selection seed
 
 - Made rendered nursery plants keyboard and pointer selectable with stable plant

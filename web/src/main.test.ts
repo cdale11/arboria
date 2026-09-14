@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   createApiClient,
+  addNurseryCameraControls,
   acceptsNurserySnapshot,
   formatPlantSummary,
   formatWaterVolume,
@@ -105,6 +106,16 @@ describe("dependency baseline app", () => {
     expect(scene.querySelectorAll("ellipse[data-plant-id]").length).toBeGreaterThan(1);
     expect(scene.querySelector('line[data-plant-id="1"]')).not.toBeNull();
     expect(scene.querySelector('g[data-plant-id="1"]')?.getAttribute("tabindex")).toBe("0");
+  });
+
+  it("provides bounded nursery camera controls", () => {
+    const container = document.createElement("div");
+    const scene = renderNurseryScene(stubApiData().plants);
+    addNurseryCameraControls(container, scene);
+    container.querySelector<HTMLButtonElement>('[data-action="camera-zoom-in"]')!.click();
+    expect(scene.getAttribute("viewBox")).toBe("42 26 336 208");
+    container.querySelector<HTMLButtonElement>('[data-action="camera-reset"]')!.click();
+    expect(scene.getAttribute("viewBox")).toBe("0 0 420 260");
   });
 
   it("parses nursery API payloads", () => {

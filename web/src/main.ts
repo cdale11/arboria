@@ -232,6 +232,63 @@ export function renderNurseryScene(plants: PlantSummary[]): SVGSVGElement {
   return svg;
 }
 
+export function addNurseryCameraControls(
+  container: HTMLElement,
+  scene: SVGSVGElement,
+): void {
+  const controls = document.createElement("div");
+  controls.className = "scene-camera-controls";
+  controls.setAttribute("aria-label", "Nursery camera controls");
+  const base = { x: 0, y: 0, width: 420, height: 260 };
+  let view = { ...base };
+  const update = (): void => {
+    scene.setAttribute("viewBox", `${view.x} ${view.y} ${view.width} ${view.height}`);
+  };
+  const zoom = (factor: number): void => {
+    const width = Math.max(180, Math.min(700, view.width * factor));
+    const height = width * (base.height / base.width);
+    view = {
+      x: (base.width - width) / 2,
+      y: (base.height - height) / 2,
+      width,
+      height,
+    };
+    update();
+  };
+  const button = (label: string, action: string, handler: () => void): void => {
+    controls.append(actionButton(label, action, handler));
+  };
+  button("Zoom out", "camera-zoom-out", () => zoom(1.2));
+  button("Reset camera", "camera-reset", () => {
+    view = { ...base };
+    update();
+  });
+  button("Zoom in", "camera-zoom-in", () => zoom(0.8));
+  scene.addEventListener("wheel", (event) => {
+    event.preventDefault();
+    zoom(event.deltaY > 0 ? 1.1 : 0.9);
+  }, { passive: false });
+  let drag: { id: number; x: number; y: number; viewX: number; viewY: number } | null = null;
+  scene.addEventListener("pointerdown", (event) => {
+    drag = { id: event.pointerId, x: event.clientX, y: event.clientY, viewX: view.x, viewY: view.y };
+    scene.setPointerCapture(event.pointerId);
+  });
+  scene.addEventListener("pointermove", (event) => {
+    if (drag === null || drag.id !== event.pointerId) return;
+    const scaleX = view.width / Math.max(1, scene.clientWidth);
+    const scaleY = view.height / Math.max(1, scene.clientHeight);
+    view.x = drag.viewX - (event.clientX - drag.x) * scaleX;
+    view.y = drag.viewY - (event.clientY - drag.y) * scaleY;
+    update();
+  });
+  const endDrag = (event: PointerEvent): void => {
+    if (drag?.id === event.pointerId) drag = null;
+  };
+  scene.addEventListener("pointerup", endDrag);
+  scene.addEventListener("pointercancel", endDrag);
+  container.append(controls);
+}
+
 export function renderNurseryApp(
   target: HTMLElement,
   world: NurseryWorld,
@@ -1335,6 +1392,7 @@ export async function mountNurseryApp(
         }
       }
       scene.replaceChildren(sceneTitle, sceneSvg);
+      addNurseryCameraControls(scene, sceneSvg);
       const callbacks: ControlCallbacks = {
         onInspect: (plantId) => {
           selectedPlantId = plantId;
