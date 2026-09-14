@@ -268,6 +268,33 @@ export interface NurseryApi {
   plants: PlantSummary[];
 }
 
+export type NurseryStoreListener = (snapshot: NurseryApi) => void;
+
+export class NurseryWorldStore {
+  private current: NurseryApi | null = null;
+  private readonly listeners = new Set<NurseryStoreListener>();
+
+  get snapshot(): NurseryApi | null {
+    return this.current;
+  }
+
+  replace(next: NurseryApi): boolean {
+    if (!acceptsNurserySnapshot(this.current, next)) {
+      return false;
+    }
+    this.current = next;
+    for (const listener of this.listeners) {
+      listener(next);
+    }
+    return true;
+  }
+
+  subscribe(listener: NurseryStoreListener): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -1085,7 +1112,7 @@ export async function mountNurseryApp(
   let result: string | null = null;
   let exportArchive = "";
   let refreshSequence = 0;
-  let apiState: NurseryApi | null = null;
+  const worldStore = new NurseryWorldStore();
 
   async function refresh(): Promise<void> {
     const sequence = ++refreshSequence;
@@ -1095,10 +1122,9 @@ export async function mountNurseryApp(
         client.listSaves(),
         client.companionStatus(),
       ]);
-      if (sequence !== refreshSequence || !acceptsNurserySnapshot(apiState, api)) {
+      if (sequence !== refreshSequence || !worldStore.replace(api)) {
         return;
       }
-      apiState = api;
       const lines = formatNurseryStatus(api.world);
       status.textContent = lines;
       dashboard.replaceChildren(renderNurseryDashboard(api.world));

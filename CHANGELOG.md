@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-09-14 — UI-02 frontend world store
+
+### Changed
+
+- Added `NurseryWorldStore` with monotonic revision replacement, subscriptions,
+  and stale-snapshot rejection; nursery refresh now uses the store.
+
+### Verification and limitations
+
+- `npm --prefix web run check` passed.
+- `npm --prefix web run test` passed: 26 tests.
+- Server-issued coherent snapshots, WebSocket consumption, reconnect/resync, and
+  server-owned lifecycle scheduling remain open.
+
 ## 2026-09-14 — Partial UI-02 revision guard
 
 ### Changed

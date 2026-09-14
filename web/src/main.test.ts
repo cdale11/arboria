@@ -8,6 +8,7 @@ import {
   loadNurseryApp,
   mountNurseryApp,
   parseNurseryApi,
+  NurseryWorldStore,
   readCsrfToken,
   renderDependencyBaseline,
   renderNurseryApp,
@@ -181,6 +182,26 @@ describe("dependency baseline app", () => {
     };
     expect(acceptsNurserySnapshot(current, older)).toBe(false);
     expect(acceptsNurserySnapshot(current, current)).toBe(true);
+  });
+
+  it("publishes accepted snapshots and ignores stale replacements", () => {
+    const store = new NurseryWorldStore();
+    const listener = vi.fn();
+    const current = stubApiData();
+    const newer = {
+      ...current,
+      world: { ...current.world, world_revision: current.world.world_revision + 1 },
+    };
+    const unsubscribe = store.subscribe(listener);
+
+    expect(store.replace(current)).toBe(true);
+    expect(store.replace({ ...current, world: { ...current.world, world_revision: 1 } })).toBe(false);
+    expect(store.replace(newer)).toBe(true);
+    expect(store.snapshot).toBe(newer);
+    expect(listener).toHaveBeenCalledTimes(2);
+    unsubscribe();
+    expect(store.replace({ ...newer, world: { ...newer.world, world_revision: 4 } })).toBe(true);
+    expect(listener).toHaveBeenCalledTimes(2);
   });
 
   it("loads and renders nursery projections", async () => {
