@@ -8,6 +8,7 @@ import {
   loadNurseryApp,
   mountNurseryApp,
   parseNurseryApi,
+  parseNurseryStreamFrame,
   NurseryWorldStore,
   readCsrfToken,
   renderDependencyBaseline,
@@ -202,6 +203,19 @@ describe("dependency baseline app", () => {
     unsubscribe();
     expect(store.replace({ ...newer, world: { ...newer.world, world_revision: 4 } })).toBe(true);
     expect(listener).toHaveBeenCalledTimes(2);
+  });
+
+  it("parses stream frames and only accepts deltas from the current revision", () => {
+    const store = new NurseryWorldStore();
+    const current = stubApiData();
+    store.replace(current);
+    const frame = parseNurseryStreamFrame({
+      kind: "delta", revision: 4, base_revision: 3, payload: { plants: [] },
+    });
+    expect(frame).not.toBeNull();
+    expect(store.canAcceptFrame(frame!, null)).toBe(true);
+    expect(store.canAcceptFrame({ ...frame!, base_revision: 2 }, null)).toBe(false);
+    expect(parseNurseryStreamFrame({ kind: "unknown", revision: 4 })).toBeNull();
   });
 
   it("loads and renders nursery projections", async () => {

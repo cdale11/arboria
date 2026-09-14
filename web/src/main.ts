@@ -268,6 +268,34 @@ export interface NurseryApi {
   plants: PlantSummary[];
 }
 
+export interface NurseryStreamFrame {
+  kind: "snapshot" | "delta" | "synced" | "pong";
+  revision: number;
+  base_revision: number | null;
+  payload: unknown;
+}
+
+export function parseNurseryStreamFrame(value: unknown): NurseryStreamFrame | null {
+  if (!isRecord(value) || typeof value["kind"] !== "string") {
+    return null;
+  }
+  const revision = toNumber(value["revision"]);
+  const base = value["base_revision"];
+  if (revision === null || (base !== null && toNumber(base) === null)) {
+    return null;
+  }
+  const kind = value["kind"];
+  if (kind !== "snapshot" && kind !== "delta" && kind !== "synced" && kind !== "pong") {
+    return null;
+  }
+  return {
+    kind,
+    revision,
+    base_revision: base === null ? null : base as number,
+    payload: value["payload"],
+  };
+}
+
 export type NurseryStoreListener = (snapshot: NurseryApi) => void;
 
 export class NurseryWorldStore {
@@ -287,6 +315,16 @@ export class NurseryWorldStore {
       listener(next);
     }
     return true;
+  }
+
+  canAcceptFrame(frame: NurseryStreamFrame, snapshot: NurseryApi | null): boolean {
+    if (frame.kind === "synced" || frame.kind === "pong") {
+      return frame.revision >= (this.current?.world.world_revision ?? 0);
+    }
+    if (frame.kind === "delta") {
+      return frame.base_revision === this.current?.world.world_revision && frame.revision > frame.base_revision;
+    }
+    return snapshot !== null && snapshot.world.world_revision === frame.revision && this.replace(snapshot);
   }
 
   subscribe(listener: NurseryStoreListener): () => void {

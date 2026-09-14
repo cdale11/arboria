@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-09-14 — UI-02 stream frame validation
+
+### Changed
+
+- Added validated parsing for snapshot, delta, synced, and pong stream frames.
+- Added base-revision checks so deltas cannot be accepted against stale client state.
+
+### Verification and limitations
+
+- `npm --prefix web run check` passed.
+- `npm --prefix web run test` passed: 27 tests.
+- WebSocket lifecycle wiring, delta application, coherent server snapshots, and
+  server-owned scheduling remain open; UI-02 is not marked complete.
+
 ## 2026-09-14 — UI-02 frontend world store
 
 ### Changed
