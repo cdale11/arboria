@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-09-14 — UI-04 scene selection seed
+
+- Made rendered nursery plants keyboard and pointer selectable with stable plant
+  identity, accessible labels, and selected-state feedback in the inspector path.
+- Added regression coverage for keyboard-reachable scene plant groups.
+
+Verification: `npm --prefix web run check`, 30 frontend tests, and production build passed.
+
 ## 2026-09-14 — UI-03 phone bottom sheet
 
 - Added the narrow-screen selected-care bottom-sheet presentation with reserved

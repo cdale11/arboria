@@ -160,6 +160,10 @@ export function renderNurseryScene(plants: PlantSummary[]): SVGSVGElement {
 
     const group = document.createElementNS(svg.namespaceURI, "g");
     group.setAttribute("data-plant-id", String(plant.plant_id));
+    group.setAttribute("role", "button");
+    group.setAttribute("tabindex", "0");
+    group.setAttribute("aria-label", `${formatSpeciesName(plant.species_id)} plant ${plant.plant_id}`);
+    group.setAttribute("style", "cursor: pointer");
     group.setAttribute("opacity", plant.alive ? "1" : "0.7");
 
     const shadow = document.createElementNS(svg.namespaceURI, "ellipse");
@@ -1310,7 +1314,27 @@ export async function mountNurseryApp(
       const lines = formatNurseryStatus(api.world);
       status.textContent = lines;
       dashboard.replaceChildren(renderNurseryDashboard(api.world));
-      scene.replaceChildren(sceneTitle, renderNurseryScene(api.plants));
+      const sceneSvg = renderNurseryScene(api.plants);
+      for (const plantGroup of sceneSvg.querySelectorAll<SVGGElement>("[data-plant-id]")) {
+        const selectPlant = (): void => {
+          const plantId = Number(plantGroup.dataset.plantId);
+          if (Number.isFinite(plantId)) {
+            selectedPlantId = plantId;
+            void inspectPlant(plantId);
+          }
+        };
+        plantGroup.addEventListener("click", selectPlant);
+        plantGroup.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            selectPlant();
+          }
+        });
+        if (Number(plantGroup.dataset.plantId) === selectedPlantId) {
+          plantGroup.setAttribute("aria-pressed", "true");
+        }
+      }
+      scene.replaceChildren(sceneTitle, sceneSvg);
       const callbacks: ControlCallbacks = {
         onInspect: (plantId) => {
           selectedPlantId = plantId;

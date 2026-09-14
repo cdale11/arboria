@@ -104,6 +104,7 @@ describe("dependency baseline app", () => {
     expect(scene.querySelector('[data-action="nursery-floor"]')).not.toBeNull();
     expect(scene.querySelectorAll("ellipse[data-plant-id]").length).toBeGreaterThan(1);
     expect(scene.querySelector('line[data-plant-id="1"]')).not.toBeNull();
+    expect(scene.querySelector('g[data-plant-id="1"]')?.getAttribute("tabindex")).toBe("0");
   });
 
   it("parses nursery API payloads", () => {
