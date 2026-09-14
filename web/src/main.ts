@@ -297,7 +297,7 @@ export function parseNurseryStreamFrame(value: unknown): NurseryStreamFrame | nu
 }
 
 export function parseNurseryStreamSnapshot(frame: NurseryStreamFrame): NurseryApi | null {
-  if (frame.kind !== "snapshot" || !isRecord(frame.payload)) return null;
+  if ((frame.kind !== "snapshot" && frame.kind !== "delta") || !isRecord(frame.payload)) return null;
   const loop = frame.payload["loop"];
   const nursery = frame.payload["nursery"];
   if (!isRecord(loop) || !isRecord(nursery)) return null;
@@ -1233,6 +1233,7 @@ export async function mountNurseryApp(
   let exportArchive = "";
   let refreshSequence = 0;
   const worldStore = new NurseryWorldStore();
+  let streamClient: NurseryStreamClient | null = null;
 
   async function refresh(): Promise<void> {
     const sequence = ++refreshSequence;
@@ -1402,6 +1403,20 @@ export async function mountNurseryApp(
   }
 
   await refresh();
+  if (typeof WebSocket !== "undefined" && typeof window !== "undefined") {
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    streamClient = new NurseryStreamClient(`${protocol}//${window.location.host}/api/v1/stream`, {
+      onFrame: (frame) => {
+        if (frame.kind === "snapshot") {
+          if (worldStore.replaceStreamSnapshot(frame)) void refresh();
+        } else if (frame.kind === "delta") {
+          if (worldStore.canAcceptFrame(frame, worldStore.snapshot)) void refresh();
+          else streamClient?.sync(worldStore.snapshot?.world.world_revision ?? 0);
+        }
+      },
+    });
+    streamClient.start();
+  }
 }
 
 const app = document.querySelector<HTMLElement>("#app");

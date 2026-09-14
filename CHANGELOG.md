@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-09-14 — Complete UI-02 stream integration
+
+### Changed
+
+- Wired the reconnecting stream client into the mounted nursery application.
+- Stream snapshots replace the revisioned frontend store and trigger a UI refresh;
+  deltas are treated as full revisioned projections, while stale bases request sync.
+- Marked UI-02 complete; native-browser evidence remains under UI-10.
+
+### Verification
+
+- `npm --prefix web run check` passed.
+- `npm --prefix web run test` passed: 29 tests.
+
 ## 2026-09-14 — UI-02 stream nursery projection
 
 ### Changed
