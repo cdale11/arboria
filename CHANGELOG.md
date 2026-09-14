@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-09-14 — UI-03 focused care shell
+
+### Changed
+
+- Added persistent section navigation and a plant-picker alternative.
+- Reduced care actions to the selected plant while retaining the selected
+  identity across refreshes.
+- Preserved the named-save draft through refreshes.
+
+### Verification and limitations
+
+- `npm --prefix web run check` passed.
+- `npm --prefix web run test` passed: 29 tests.
+- Phone bottom-sheet behavior, full panel navigation, and real-browser evidence
+  remain open under UI-03/UI-10.
+
 ## 2026-09-14 — UI-03 selection state seed
 
 - Retained selected plant identity through the mounted client refresh path and

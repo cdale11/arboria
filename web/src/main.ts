@@ -986,6 +986,7 @@ export interface ControlContext {
   result: string | null;
   exportArchive: string;
   companion: CompanionStatus;
+  saveNameDraft?: string;
 }
 
 function actionButton(
@@ -1015,9 +1016,11 @@ export function renderControlPanel(
   const care = document.createElement("section");
   care.className = "control-section care-section";
   const careHeading = document.createElement("h2");
-  careHeading.textContent = "Care";
+  careHeading.textContent = context.selectedPlantId === null ? "Select a plant" : "Selected plant";
   care.append(careHeading);
-  for (const plant of context.plants) {
+  const selected = context.plants.find((plant) => plant.plant_id === context.selectedPlantId);
+  const visiblePlants = selected === undefined ? [] : [selected];
+  for (const plant of visiblePlants) {
     const row = document.createElement("article");
     row.className = "plant-card";
     if (plant.plant_id === context.selectedPlantId) {
@@ -1066,6 +1069,21 @@ export function renderControlPanel(
     row.append(plantHeading, plantSummary, actions);
     care.append(row);
   }
+  const picker = document.createElement("nav");
+  picker.className = "plant-picker";
+  picker.setAttribute("aria-label", "Choose a plant");
+  const pickerHeading = document.createElement("h3");
+  pickerHeading.textContent = "Plants";
+  picker.append(pickerHeading);
+  for (const plant of context.plants) {
+    picker.append(actionButton(
+      `${formatSpeciesName(plant.species_id)} · ${plant.site_id}`,
+      "choose-plant",
+      () => callbacks.onInspect(plant.plant_id),
+      { plantId: String(plant.plant_id) },
+    ));
+  }
+  care.append(picker);
   if (context.detail !== null) {
     const detailBox = document.createElement("div");
     const detailHeading = document.createElement("h3");
@@ -1143,6 +1161,7 @@ export function renderControlPanel(
   nameInput.type = "text";
   nameInput.placeholder = "Save name";
   nameInput.dataset.action = "save-name";
+  nameInput.value = context.saveNameDraft ?? "";
   saves.append(
     document.createTextNode(" "),
     nameInput,
@@ -1219,6 +1238,16 @@ export async function mountNurseryApp(
   target.replaceChildren();
   const heading = document.createElement("h1");
   heading.textContent = "Arboria Nursery";
+  const navigation = document.createElement("nav");
+  navigation.className = "app-navigation";
+  navigation.setAttribute("aria-label", "Nursery sections");
+  for (const label of ["Nursery", "Plants", "Shop", "Companion", "Saves"]) {
+    const item = document.createElement("button");
+    item.type = "button";
+    item.textContent = label;
+    item.dataset.section = label.toLowerCase();
+    navigation.append(item);
+  }
   const status = document.createElement("p");
   status.dataset.action = "status";
   status.textContent = "Loading nursery...";
@@ -1231,10 +1260,11 @@ export async function mountNurseryApp(
   sceneTitle.textContent = "Living nursery";
   scene.append(sceneTitle);
   const panel = document.createElement("div");
-  target.append(heading, status, dashboard, scene, panel);
+  target.append(heading, navigation, status, dashboard, scene, panel);
 
   let detail: PlantDetail | null = null;
   let selectedPlantId: number | null = null;
+  let saveNameDraft = "";
   let result: string | null = null;
   let exportArchive = "";
   let refreshSequence = 0;
@@ -1251,6 +1281,9 @@ export async function mountNurseryApp(
       ]);
       if (sequence !== refreshSequence || !worldStore.replace(api)) {
         return;
+      }
+      if (selectedPlantId === null && api.plants.length > 0) {
+        selectedPlantId = api.plants[0]!.plant_id;
       }
       const lines = formatNurseryStatus(api.world);
       status.textContent = lines;
@@ -1277,6 +1310,7 @@ export async function mountNurseryApp(
         onSpeed: (speed) => void runClock(`speed ${speed}x`, () => client.setSpeed(speed)),
         onCheckpoint: () => void runSimple("Checkpoint written.", () => client.checkpoint()),
         onNamedSave: (name) => {
+          saveNameDraft = name;
           if (name.trim() === "") {
             result = "Save name is required.";
             void refresh();
@@ -1298,6 +1332,7 @@ export async function mountNurseryApp(
         onCompanionToggle: () => void toggleCompanion(companion),
         onCompanionRun: () => void runCompanion(),
         onRefresh: () => {
+          saveNameDraft = (panel.querySelector('[data-action="save-name"]') as HTMLInputElement | null)?.value ?? saveNameDraft;
           result = null;
           void refresh();
         },
@@ -1305,6 +1340,7 @@ export async function mountNurseryApp(
       renderControlPanel(panel, callbacks, {
         plants: api.plants,
         selectedPlantId,
+        saveNameDraft,
         demand: api.world.nursery.demand_remaining,
         saves,
         detail,
