@@ -547,6 +547,19 @@ describe("nursery controls", () => {
     }
   });
 
+  it("switches persistent navigation sections without rebuilding the shell", async () => {
+    const { target } = await mountedClient();
+    const shell = target.firstElementChild;
+    const shopButton = target.querySelector<HTMLButtonElement>('[data-section="shop"]');
+    expect(shopButton).not.toBeNull();
+    shopButton!.click();
+    expect(target.firstElementChild).toBe(shell);
+    expect(target.querySelector<HTMLElement>('.control-section[data-section="shop"]')?.hidden).toBe(false);
+    expect(target.querySelector<HTMLElement>('.care-section')?.hidden).toBe(true);
+    target.querySelector<HTMLButtonElement>('[data-section="nursery"]')!.click();
+    expect(target.querySelector<HTMLElement>('.care-section')?.hidden).toBe(false);
+  });
+
   it("runs the baseline caretaker through companion controls", async () => {
     const runCompanion = vi.fn(async () => ({
       enabled: true,

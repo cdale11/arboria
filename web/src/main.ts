@@ -1015,6 +1015,7 @@ export function renderControlPanel(
 
   const care = document.createElement("section");
   care.className = "control-section care-section";
+  care.dataset.section = "nursery";
   const careHeading = document.createElement("h2");
   careHeading.textContent = context.selectedPlantId === null ? "Select a plant" : "Selected plant";
   care.append(careHeading);
@@ -1107,6 +1108,7 @@ export function renderControlPanel(
 
   const shop = document.createElement("section");
   shop.className = "control-section";
+  shop.dataset.section = "shop";
   const shopHeading = document.createElement("h2");
   shopHeading.textContent = "Shop";
   shop.append(shopHeading);
@@ -1127,6 +1129,7 @@ export function renderControlPanel(
 
   const clock = document.createElement("section");
   clock.className = "control-section";
+  clock.dataset.section = "nursery";
   const clockHeading = document.createElement("h2");
   clockHeading.textContent = "Clock";
   clock.append(clockHeading);
@@ -1153,6 +1156,7 @@ export function renderControlPanel(
 
   const saves = document.createElement("section");
   saves.className = "control-section saves-section";
+  saves.dataset.section = "saves";
   const savesHeading = document.createElement("h2");
   savesHeading.textContent = "Saves";
   saves.append(savesHeading);
@@ -1199,6 +1203,7 @@ export function renderControlPanel(
 
   const companion = document.createElement("section");
   companion.className = "control-section companion-section";
+  companion.dataset.section = "companion";
   const companionHeading = document.createElement("h2");
   companionHeading.textContent = "Caretaker companion";
   const companionStatus = document.createElement("p");
@@ -1265,11 +1270,28 @@ export async function mountNurseryApp(
   let detail: PlantDetail | null = null;
   let selectedPlantId: number | null = null;
   let saveNameDraft = "";
+  let activeSection = "nursery";
   let result: string | null = null;
   let exportArchive = "";
   let refreshSequence = 0;
   const worldStore = new NurseryWorldStore();
   let streamClient: NurseryStreamClient | null = null;
+
+  function applySection(): void {
+    for (const section of panel.querySelectorAll<HTMLElement>(".control-section")) {
+      section.hidden = section.dataset.section !== activeSection &&
+        !(activeSection === "plants" && section.dataset.section === "nursery");
+    }
+    for (const button of navigation.querySelectorAll<HTMLButtonElement>("button")) {
+      button.setAttribute("aria-current", button.dataset.section === activeSection ? "page" : "false");
+    }
+  }
+  for (const button of navigation.querySelectorAll<HTMLButtonElement>("button")) {
+    button.addEventListener("click", () => {
+      activeSection = button.dataset.section ?? "nursery";
+      applySection();
+    });
+  }
 
   async function refresh(): Promise<void> {
     const sequence = ++refreshSequence;
@@ -1348,6 +1370,7 @@ export async function mountNurseryApp(
         exportArchive,
         companion,
       });
+      applySection();
     } catch (error) {
       const message = error instanceof Error ? error.message : "unknown error";
       renderLoadError(target, message);

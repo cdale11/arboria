@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-09-14 — UI-03 in-place section navigation
+
+- Made persistent Nursery, Plants, Shop, Companion, and Saves navigation switch
+  sections in place without rebuilding the application shell.
+- Added accessible current-section markers and regression coverage.
+
+Verification: `npm --prefix web run check` passed; frontend test suite: 30 passed.
+
 ## 2026-09-14 — UI-03 focused care shell
 
 ### Changed
