@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-09-14 — UI-02 stream nursery projection
+
+### Changed
+
+- Added plant summaries to the authoritative stream nursery projection so a
+  snapshot or delta can carry the same plant data as `/api/v1/plants`.
+
+### Verification
+
+- Server app tests: 44 passed.
+- Ruff and mypy passed for `src/arboria/app/server.py`.
+
 ## 2026-09-14 — UI-02 reconnecting stream transport
 
 ### Changed

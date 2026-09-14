@@ -290,6 +290,12 @@ def create_app() -> FastAPI:
             drainage_kg=nursery_drainage_kg,
             species_by_plant=nursery_species,
         )
+        plants = project_plants(
+            nursery_organs,
+            nursery_zones,
+            nursery_nutrient_zones,
+            nursery_species,
+        )
         return {
             "schema_version": NURSERY_SCHEMA_VERSION,
             "plant_count": summary.plant_count,
@@ -313,6 +319,28 @@ def create_app() -> FastAPI:
                 for species_id, remaining in sorted(
                     nursery_economy.demand_remaining.items()
                 )
+            ],
+            "plants": [
+                {
+                    "plant_id": projection.plant_id,
+                    "species_id": projection.species_id,
+                    "site_id": projection.site_id,
+                    "protected": projection.plant_id in nursery_protected_plants,
+                    "organ_count": projection.organ_count,
+                    "leaf_area_m2": projection.leaf_area_m2,
+                    "stem_length_m": projection.stem_length_m,
+                    "reserve_carbon_kg": projection.reserve_carbon_kg,
+                    "structural_carbon_kg": projection.structural_carbon_kg,
+                    "zone_water_kg": projection.zone_water_kg,
+                    "water_stress_factor": projection.water_stress_factor,
+                    "alive": projection.alive,
+                    "damage_fraction": projection.damage_fraction,
+                    "nutrient_stress_factor": projection.nutrient_stress_factor,
+                    "zone_nitrogen_kg": projection.zone_nitrogen_kg,
+                    "zone_phosphorus_kg": projection.zone_phosphorus_kg,
+                    "zone_potassium_kg": projection.zone_potassium_kg,
+                }
+                for projection in plants
             ],
         }
 
