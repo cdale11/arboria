@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   createApiClient,
+  acceptsNurserySnapshot,
   formatPlantSummary,
   formatWaterVolume,
   loadNurseryApp,
@@ -154,6 +155,32 @@ describe("dependency baseline app", () => {
     expect(parsed?.world.sim_tick).toBe(3);
     expect(parsed?.plants).toHaveLength(1);
     expect(parseNurseryApi({}, {})).toBeNull();
+  });
+
+  it("rejects plant projections from a different world revision", () => {
+    const world = {
+      sim_tick: 3,
+      world_revision: 3,
+      nursery: {
+        plant_count: 0, organ_count: 0, reserve_carbon_kg: 0,
+        structural_carbon_kg: 0, atmospheric_carbon_uptake_kg: 0,
+        zone_water_kg: 0, reservoir_kg: 0, transpired_kg: 0, drainage_kg: 0,
+        zone_nitrogen_kg: 0, zone_phosphorus_kg: 0, zone_potassium_kg: 0,
+        dead_plant_count: 0, species_ids: [], cash_minor: 0,
+        demand_remaining: [], protected_plant_ids: [],
+      },
+    };
+    expect(parseNurseryApi(world, { revision: 2, plants: [] })).toBeNull();
+  });
+
+  it("does not accept an older nursery snapshot", () => {
+    const current = stubApiData();
+    const older = {
+      ...current,
+      world: { ...current.world, world_revision: current.world.world_revision - 1 },
+    };
+    expect(acceptsNurserySnapshot(current, older)).toBe(false);
+    expect(acceptsNurserySnapshot(current, current)).toBe(true);
   });
 
   it("loads and renders nursery projections", async () => {

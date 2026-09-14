@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-09-14 — Partial UI-02 revision guard
+
+### Changed
+
+- Reject explicitly mismatched world and plant projection revisions.
+- Ignore out-of-order nursery refresh results so older responses cannot replace
+  newer state.
+
+### Verification and limitations
+
+- `npm --prefix web run check` passed.
+- `npm --prefix web run test` passed: 25 tests.
+- Full coherent snapshots, frontend stream consumption, reconnect/resync, and
+  server-owned lifecycle scheduling remain open under UI-02.
+
 ## 2026-09-14 — R1 UI audit and upgrade specification
 
 ### Changed

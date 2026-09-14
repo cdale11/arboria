@@ -284,7 +284,11 @@ export function parseNurseryApi(worldJson: unknown, plantsJson: unknown): Nurser
   const revision = toNumber(worldJson["world_revision"]);
   const nursery = worldJson["nursery"];
   const plants = plantsJson["plants"];
+  const plantsRevision = toNumber(plantsJson["revision"]);
   if (simTick === null || revision === null || !isRecord(nursery) || !Array.isArray(plants)) {
+    return null;
+  }
+  if (plantsRevision !== null && plantsRevision !== revision) {
     return null;
   }
   const numbers: (number | null)[] = [
@@ -411,6 +415,16 @@ export function parseNurseryApi(worldJson: unknown, plantsJson: unknown): Nurser
     },
     plants: parsedPlants,
   };
+}
+
+export function acceptsNurserySnapshot(
+  current: NurseryApi | null,
+  incoming: NurseryApi,
+): boolean {
+  if (current === null) {
+    return true;
+  }
+  return incoming.world.world_revision >= current.world.world_revision;
 }
 
 export async function loadNurseryApp(
@@ -1070,16 +1084,22 @@ export async function mountNurseryApp(
   let detail: PlantDetail | null = null;
   let result: string | null = null;
   let exportArchive = "";
+  let refreshSequence = 0;
+  let apiState: NurseryApi | null = null;
 
   async function refresh(): Promise<void> {
+    const sequence = ++refreshSequence;
     try {
       const [api, saves, companion] = await Promise.all([
         client.load(),
         client.listSaves(),
         client.companionStatus(),
       ]);
-      const lines =
-        formatNurseryStatus(api.world);
+      if (sequence !== refreshSequence || !acceptsNurserySnapshot(apiState, api)) {
+        return;
+      }
+      apiState = api;
+      const lines = formatNurseryStatus(api.world);
       status.textContent = lines;
       dashboard.replaceChildren(renderNurseryDashboard(api.world));
       scene.replaceChildren(sceneTitle, renderNurseryScene(api.plants));
