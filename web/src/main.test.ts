@@ -9,6 +9,7 @@ import {
   mountNurseryApp,
   parseNurseryApi,
   parseNurseryStreamFrame,
+  parseNurseryStreamSnapshot,
   NurseryWorldStore,
   NurseryStreamClient,
   readCsrfToken,
@@ -217,6 +218,19 @@ describe("dependency baseline app", () => {
     expect(store.canAcceptFrame(frame!, null)).toBe(true);
     expect(store.canAcceptFrame({ ...frame!, base_revision: 2 }, null)).toBe(false);
     expect(parseNurseryStreamFrame({ kind: "unknown", revision: 4 })).toBeNull();
+  });
+
+  it("converts an authoritative stream snapshot into the world store shape", () => {
+    const frame = parseNurseryStreamFrame({
+      kind: "snapshot", revision: 3, base_revision: 3,
+      payload: {
+        loop: { sim_tick: 3 },
+        nursery: { ...stubApiData().world.nursery, plants: stubApiData().plants },
+      },
+    });
+    const snapshot = frame === null ? null : parseNurseryStreamSnapshot(frame);
+    expect(snapshot?.world.world_revision).toBe(3);
+    expect(snapshot?.plants).toHaveLength(1);
   });
 
   it("opens the stream, pings, forwards frames, and reconnects after close", async () => {

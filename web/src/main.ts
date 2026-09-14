@@ -296,6 +296,20 @@ export function parseNurseryStreamFrame(value: unknown): NurseryStreamFrame | nu
   };
 }
 
+export function parseNurseryStreamSnapshot(frame: NurseryStreamFrame): NurseryApi | null {
+  if (frame.kind !== "snapshot" || !isRecord(frame.payload)) return null;
+  const loop = frame.payload["loop"];
+  const nursery = frame.payload["nursery"];
+  if (!isRecord(loop) || !isRecord(nursery)) return null;
+  const simTick = toNumber(loop["sim_tick"]);
+  const plants = nursery["plants"];
+  if (simTick === null || !Array.isArray(plants)) return null;
+  return parseNurseryApi(
+    { sim_tick: simTick, world_revision: frame.revision, nursery },
+    { revision: frame.revision, plants },
+  );
+}
+
 export interface NurseryStreamHandlers {
   onFrame: (frame: NurseryStreamFrame) => void;
   onState?: (state: "connecting" | "open" | "closed") => void;
@@ -388,6 +402,11 @@ export class NurseryWorldStore {
       return frame.base_revision === this.current?.world.world_revision && frame.revision > frame.base_revision;
     }
     return snapshot !== null && snapshot.world.world_revision === frame.revision && this.replace(snapshot);
+  }
+
+  replaceStreamSnapshot(frame: NurseryStreamFrame): boolean {
+    const snapshot = parseNurseryStreamSnapshot(frame);
+    return snapshot !== null && this.replace(snapshot);
   }
 
   subscribe(listener: NurseryStoreListener): () => void {
