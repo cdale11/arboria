@@ -296,6 +296,69 @@ export function parseNurseryStreamFrame(value: unknown): NurseryStreamFrame | nu
   };
 }
 
+export interface NurseryStreamHandlers {
+  onFrame: (frame: NurseryStreamFrame) => void;
+  onState?: (state: "connecting" | "open" | "closed") => void;
+}
+
+export class NurseryStreamClient {
+  private socket: WebSocket | null = null;
+  private stopped = false;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor(
+    private readonly url: string,
+    private readonly handlers: NurseryStreamHandlers,
+    private readonly socketFactory: (url: string) => WebSocket = (value) => new WebSocket(value),
+  ) {}
+
+  start(): void {
+    this.stopped = false;
+    this.connect();
+  }
+
+  stop(): void {
+    this.stopped = true;
+    if (this.reconnectTimer !== null) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    this.socket?.close();
+    this.socket = null;
+  }
+
+  sync(revision: number): void {
+    if (this.socket?.readyState === 1) {
+      this.socket.send(JSON.stringify({ kind: "sync", base_revision: revision }));
+    }
+  }
+
+  private connect(): void {
+    if (this.stopped) return;
+    this.handlers.onState?.("connecting");
+    const socket = this.socketFactory(this.url);
+    this.socket = socket;
+    socket.onopen = () => {
+      this.handlers.onState?.("open");
+      socket.send(JSON.stringify({ kind: "ping" }));
+    };
+    socket.onmessage = (event) => {
+      let raw: unknown;
+      try { raw = JSON.parse(String(event.data)); } catch { return; }
+      const frame = parseNurseryStreamFrame(raw);
+      if (frame !== null) this.handlers.onFrame(frame);
+    };
+    socket.onclose = () => {
+      if (this.socket !== socket) return;
+      this.socket = null;
+      this.handlers.onState?.("closed");
+      if (!this.stopped) {
+        this.reconnectTimer = setTimeout(() => this.connect(), 250);
+      }
+    };
+  }
+}
+
 export type NurseryStoreListener = (snapshot: NurseryApi) => void;
 
 export class NurseryWorldStore {

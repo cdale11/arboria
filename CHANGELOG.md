@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-09-14 — UI-02 reconnecting stream transport
+
+### Changed
+
+- Added a reconnecting frontend WebSocket client with initial ping, validated
+  frame forwarding, close-state reporting, and bounded reconnect delay.
+- Added coverage for open, ping, frame delivery, close, and reconnect behavior.
+
+### Verification and limitations
+
+- `npm --prefix web run check` passed.
+- `npm --prefix web run test` passed: 28 tests.
+- Typed delta application and coherent server snapshot integration remain open;
+  the current server delta payload needs a versioned patch contract first.
+
 ## 2026-09-14 — UI-02 stream frame validation
 
 ### Changed

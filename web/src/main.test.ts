@@ -10,6 +10,7 @@ import {
   parseNurseryApi,
   parseNurseryStreamFrame,
   NurseryWorldStore,
+  NurseryStreamClient,
   readCsrfToken,
   renderDependencyBaseline,
   renderNurseryApp,
@@ -216,6 +217,38 @@ describe("dependency baseline app", () => {
     expect(store.canAcceptFrame(frame!, null)).toBe(true);
     expect(store.canAcceptFrame({ ...frame!, base_revision: 2 }, null)).toBe(false);
     expect(parseNurseryStreamFrame({ kind: "unknown", revision: 4 })).toBeNull();
+  });
+
+  it("opens the stream, pings, forwards frames, and reconnects after close", async () => {
+    class FakeSocket {
+      static readonly OPEN = 1;
+      readyState = FakeSocket.OPEN;
+      onopen: (() => void) | null = null;
+      onmessage: ((event: { data: string }) => void) | null = null;
+      onclose: (() => void) | null = null;
+      sent: string[] = [];
+      send(value: string): void { this.sent.push(value); }
+      close(): void { this.onclose?.(); }
+    }
+    const sockets: FakeSocket[] = [];
+    const frames: string[] = [];
+    const client = new NurseryStreamClient("ws://nursery", {
+      onFrame: (frame) => frames.push(frame.kind),
+    }, () => {
+      const socket = new FakeSocket();
+      sockets.push(socket);
+      return socket as unknown as WebSocket;
+    });
+    client.start();
+    const first = sockets[0]!;
+    first.onopen?.();
+    first.onmessage?.({ data: JSON.stringify({ kind: "pong", revision: 3, base_revision: 3, payload: {} }) });
+    expect(JSON.parse(first.sent[0]!)).toEqual({ kind: "ping" });
+    expect(frames).toEqual(["pong"]);
+    first.onclose?.();
+    await new Promise((resolve) => setTimeout(resolve, 260));
+    expect(sockets).toHaveLength(2);
+    client.stop();
   });
 
   it("loads and renders nursery projections", async () => {
