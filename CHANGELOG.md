@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-09-14 — UI-03 selection state seed
+
+- Retained selected plant identity through the mounted client refresh path and
+  exposed the selected card with an accessible state marker.
+- UI-03 remains open pending the persistent shell, focused inspector, and phone
+  navigation implementation.
+
 ## 2026-09-14 — Complete UI-02 stream integration
 
 ### Changed

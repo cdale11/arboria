@@ -979,6 +979,7 @@ export interface ControlCallbacks {
 
 export interface ControlContext {
   plants: PlantSummary[];
+  selectedPlantId: number | null;
   demand: { species_id: string; remaining: number }[];
   saves: SaveSnapshot[];
   detail: PlantDetail | null;
@@ -1019,6 +1020,10 @@ export function renderControlPanel(
   for (const plant of context.plants) {
     const row = document.createElement("article");
     row.className = "plant-card";
+    if (plant.plant_id === context.selectedPlantId) {
+      row.classList.add("is-selected");
+      row.setAttribute("aria-current", "true");
+    }
     const plantHeading = document.createElement("h3");
     plantHeading.textContent = `Plant ${plant.plant_id} · ${formatSpeciesName(plant.species_id)}`;
     const plantSummary = document.createElement("p");
@@ -1229,6 +1234,7 @@ export async function mountNurseryApp(
   target.append(heading, status, dashboard, scene, panel);
 
   let detail: PlantDetail | null = null;
+  let selectedPlantId: number | null = null;
   let result: string | null = null;
   let exportArchive = "";
   let refreshSequence = 0;
@@ -1251,7 +1257,10 @@ export async function mountNurseryApp(
       dashboard.replaceChildren(renderNurseryDashboard(api.world));
       scene.replaceChildren(sceneTitle, renderNurseryScene(api.plants));
       const callbacks: ControlCallbacks = {
-        onInspect: (plantId) => void inspectPlant(plantId),
+        onInspect: (plantId) => {
+          selectedPlantId = plantId;
+          void inspectPlant(plantId);
+        },
         onWater: (plantId) => void runCommand("nursery.water", {
           plant_id: plantId,
           water_kg: 0.02,
@@ -1295,6 +1304,7 @@ export async function mountNurseryApp(
       };
       renderControlPanel(panel, callbacks, {
         plants: api.plants,
+        selectedPlantId,
         demand: api.world.nursery.demand_remaining,
         saves,
         detail,
