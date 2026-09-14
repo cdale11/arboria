@@ -7,6 +7,7 @@
 - Added the ordered UI-01 through UI-10 plan in `docs/r1-ui-upgrade.md`.
 - Added reviewable UI-01 desktop/phone frames, care states, shop/saves/companion
   states, and draft visual tokens in `docs/ui-design-frames.md`.
+- Recorded user approval of the UI-01 frames and interaction direction.
 - Reopened the broad R1 UI roadmap claim and recorded the four confirmed UI decisions.
 
 ### Limitations

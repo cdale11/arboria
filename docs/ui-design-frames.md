@@ -1,6 +1,6 @@
 # UI-01 design frames
 
-Status: **review draft; user visual approval required**. These are layout and
+Status: **approved by user on 2026-09-14**. These are layout and
 interaction artifacts, not application screenshots or evidence that the runtime
 already implements the design. The implementation sequence is in
 [`r1-ui-upgrade.md`](r1-ui-upgrade.md).
@@ -173,12 +173,12 @@ reason code.
 
 ## Review checklist
 
-- [ ] User approves scene prominence and the desktop inspector balance.
-- [ ] User approves compact phone bottom-sheet density and navigation labels.
-- [ ] User approves the visual language, plant recognizability direction, and
+- [x] User approves scene prominence and the desktop inspector balance.
+- [x] User approves compact phone bottom-sheet density and navigation labels.
+- [x] User approves the visual language, plant recognizability direction, and
   greenhouse/outdoor distinction.
-- [ ] User approves the care journey: suggestion, editable amount, preview,
+- [x] User approves the care journey: suggestion, editable amount, preview,
   explicit action, and receipt.
-- [ ] User approves the empty/dead/stale/pending/rejected states as truthful.
+- [x] User approves the empty/dead/stale/pending/rejected states as truthful.
 - [ ] Actual browser screenshots will be required after implementation; these
   frames are not screenshot evidence.

@@ -76,7 +76,8 @@ Dependency: P0. This is the first playable release, not a skeleton server.
 
 #### Nursery, UI, and economy
 
-- [ ] [UI-01 through UI-10] Deliver the approved scene-first, detailed-stylized nursery UI, authoritative presentation state, suggested editable care, shop previews, truthful companion controls, backup/recovery, and real-browser desktop/phone acceptance. Full specification and ordered dependencies: `docs/r1-ui-upgrade.md`.
+- [x] [UI-01] Approve desktop/phone frames, visual direction, interaction states, and scene-first care journey. Artifact: `docs/ui-design-frames.md`; runtime implementation and browser evidence remain open.
+- [ ] [UI-02 through UI-10] Deliver the approved scene-first, detailed-stylized nursery UI, authoritative presentation state, suggested editable care, shop previews, truthful companion controls, backup/recovery, and real-browser desktop/phone acceptance. Full specification and ordered dependencies: `docs/r1-ui-upgrade.md`.
 - [ ] Revalidate the baseline SVG projection and touch layout after the scene-first rebuild; current jsdom/layout evidence does not close this gate. Baseline evidence: `docs/evidence/R1-ui-controls.md`.
 - [x] Implement minimal usable inspection, save, and clock controls for the living nursery. Evidence: `docs/evidence/R1-living-nursery.md`.
 - [x] Implement real inventory, suppliers, purchases, demand-limited plant sales, and finite cash/material accounting. Evidence: `docs/evidence/R1-economy.md`.

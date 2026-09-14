@@ -1,6 +1,6 @@
 # R1 UI upgrade — experience, implementation, and acceptance plan
 
-Status: **approved direction; UI-01 review draft pending visual approval**. Recorded 2026-09-14.
+Status: **approved direction; UI-01 visual frames approved, implementation pending**. Recorded 2026-09-14.
 This is a normative R1 implementation plan, not evidence of a completed UI.
 The source audit covers the baseline at commit `0f5532a`; no real-browser visual
 inspection was performed for this documentation change.

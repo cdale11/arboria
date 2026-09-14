@@ -25,6 +25,11 @@ Date of baseline: 2026-09-12. Status labels: **confirmed** = user choice; **adop
 | D17 | Suggested care with editable amount | Server recommendation and preview; player edits before explicit submission |
 | D18 | Equal desktop and phone priority | Both form factors are co-primary acceptance paths |
 
+UI-01 frame approval record (2026-09-14): the user approved the desktop
+composition, phone bottom-sheet/navigation model, warm detailed-stylized visual
+direction, and suggested editable care journey. Runtime implementation and
+actual-browser evidence remain pending.
+
 ## Adopted engineering defaults
 
 | ID | Default | Rationale and revision rule |
