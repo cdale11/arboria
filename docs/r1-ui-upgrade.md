@@ -1,6 +1,6 @@
 # R1 UI upgrade — experience, implementation, and acceptance plan
 
-Status: **approved direction; implementation pending**. Recorded 2026-09-14.
+Status: **approved direction; UI-01 review draft pending visual approval**. Recorded 2026-09-14.
 This is a normative R1 implementation plan, not evidence of a completed UI.
 The source audit covers the baseline at commit `0f5532a`; no real-browser visual
 inspection was performed for this documentation change.
@@ -196,6 +196,8 @@ specification; no production behavior claim.
    labels in one token sheet. Do not rely on color alone.
 4. Ask the user to approve the frames, specifically selection, care clarity and
    visual fidelity on both form factors. Record requested changes.
+
+**Artifact:** [`docs/ui-design-frames.md`](ui-design-frames.md).
 
 **Accept when:** approved frames and state flows are linked from evidence, with
 art references inspected if used. Mockups are labelled design artifacts, never
