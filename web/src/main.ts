@@ -269,11 +269,28 @@ export function addNurseryCameraControls(
     zoom(event.deltaY > 0 ? 1.1 : 0.9);
   }, { passive: false });
   let drag: { id: number; x: number; y: number; viewX: number; viewY: number } | null = null;
+  const pointers = new Map<number, { x: number; y: number }>();
+  let pinchDistance: number | null = null;
   scene.addEventListener("pointerdown", (event) => {
+    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (pointers.size > 1) {
+      const points = [...pointers.values()];
+      pinchDistance = Math.hypot(points[0]!.x - points[1]!.x, points[0]!.y - points[1]!.y);
+      drag = null;
+      return;
+    }
     drag = { id: event.pointerId, x: event.clientX, y: event.clientY, viewX: view.x, viewY: view.y };
     scene.setPointerCapture(event.pointerId);
   });
   scene.addEventListener("pointermove", (event) => {
+    if (pointers.has(event.pointerId)) pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (pointers.size > 1) {
+      const points = [...pointers.values()];
+      const distance = Math.hypot(points[0]!.x - points[1]!.x, points[0]!.y - points[1]!.y);
+      if (pinchDistance !== null && distance > 0) zoom(Math.max(0.8, Math.min(1.2, pinchDistance / distance)));
+      pinchDistance = distance;
+      return;
+    }
     if (drag === null || drag.id !== event.pointerId) return;
     const scaleX = view.width / Math.max(1, scene.clientWidth);
     const scaleY = view.height / Math.max(1, scene.clientHeight);
@@ -282,6 +299,8 @@ export function addNurseryCameraControls(
     update();
   });
   const endDrag = (event: PointerEvent): void => {
+    pointers.delete(event.pointerId);
+    pinchDistance = null;
     if (drag?.id === event.pointerId) drag = null;
   };
   scene.addEventListener("pointerup", endDrag);
@@ -1019,7 +1038,7 @@ export function createApiClient(
 
 export interface ControlCallbacks {
   onInspect(plantId: number): void;
-  onWater(plantId: number): void;
+  onWater(plantId: number, waterKg: number): void;
   onSell(plantId: number): void;
   onProtect(plantId: number): void;
   onUnprotect(plantId: number): void;
@@ -1100,15 +1119,25 @@ export function renderControlPanel(
         plantId: String(plant.plant_id),
       }),
       document.createTextNode(" "),
-      actionButton(
-        "Water 20 mL",
-        "water",
-        (button) => {
+      (() => {
+        const amount = document.createElement("input");
+        amount.type = "number";
+        amount.min = "0";
+        amount.max = "1000";
+        amount.step = "1";
+        amount.value = "20";
+        amount.dataset.action = "water-amount";
+        amount.dataset.plantId = String(plant.plant_id);
+        const water = actionButton("Water 20 mL", "water", (button) => {
+          const millilitres = Number(amount.value);
+          if (!Number.isFinite(millilitres) || millilitres <= 0 || millilitres > 1000) return;
           button.disabled = true;
-          callbacks.onWater(plant.plant_id);
-        },
-        { plantId: String(plant.plant_id) },
-      ),
+          callbacks.onWater(plant.plant_id, millilitres / 1000);
+        }, { plantId: String(plant.plant_id) });
+        const group = document.createElement("span");
+        group.append(amount, document.createTextNode(" mL "), water);
+        return group;
+      })(),
       document.createTextNode(" "),
       actionButton("Sell", "sell", (button) => {
         button.disabled = true;
@@ -1398,9 +1427,9 @@ export async function mountNurseryApp(
           selectedPlantId = plantId;
           void inspectPlant(plantId);
         },
-        onWater: (plantId) => void runCommand("nursery.water", {
+        onWater: (plantId, waterKg) => void runCommand("nursery.water", {
           plant_id: plantId,
-          water_kg: 0.02,
+          water_kg: waterKg,
         }),
         onSell: (plantId) => void runCommand("shop.sell_plant", { plant_id: plantId }),
         onProtect: (plantId) => void runCommand("nursery.protect", { plant_id: plantId }),
