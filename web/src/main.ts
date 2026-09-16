@@ -1130,7 +1130,14 @@ export function renderControlPanel(
         amount.dataset.plantId = String(plant.plant_id);
         const water = actionButton("Water 20 mL", "water", (button) => {
           const millilitres = Number(amount.value);
-          if (!Number.isFinite(millilitres) || millilitres <= 0 || millilitres > 1000) return;
+          if (!Number.isFinite(millilitres) || millilitres <= 0 || millilitres > 1000) {
+            amount.setAttribute("aria-invalid", "true");
+            amount.setCustomValidity("Enter a watering amount from 1 to 1000 mL.");
+            amount.reportValidity();
+            return;
+          }
+          amount.removeAttribute("aria-invalid");
+          amount.setCustomValidity("");
           button.disabled = true;
           callbacks.onWater(plant.plant_id, millilitres / 1000);
         }, { plantId: String(plant.plant_id) });
