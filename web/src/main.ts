@@ -135,6 +135,27 @@ export function renderNurseryScene(plants: PlantSummary[]): SVGSVGElement {
   floor.setAttribute("data-action", "nursery-floor");
   svg.append(floor);
 
+  const greenhouse = document.createElementNS(svg.namespaceURI, "path");
+  greenhouse.setAttribute("d", "M 52 116 L 128 72 L 212 114 L 136 158 Z M 68 107 L 68 78 L 144 38 L 220 78 L 220 108");
+  greenhouse.setAttribute("fill", "none");
+  greenhouse.setAttribute("stroke", "#8fb3b5");
+  greenhouse.setAttribute("stroke-width", "3");
+  greenhouse.setAttribute("opacity", "0.62");
+  greenhouse.setAttribute("aria-hidden", "true");
+  svg.append(greenhouse);
+  const greenhouseLabel = document.createElementNS(svg.namespaceURI, "text");
+  greenhouseLabel.setAttribute("x", "58");
+  greenhouseLabel.setAttribute("y", "66");
+  greenhouseLabel.setAttribute("fill", "#315d64");
+  greenhouseLabel.textContent = "GREENHOUSE";
+  svg.append(greenhouseLabel);
+  const outdoorLabel = document.createElementNS(svg.namespaceURI, "text");
+  outdoorLabel.setAttribute("x", "278");
+  outdoorLabel.setAttribute("y", "184");
+  outdoorLabel.setAttribute("fill", "#526757");
+  outdoorLabel.textContent = "OUTDOOR BEDS";
+  svg.append(outdoorLabel);
+
   for (const y of [96, 126, 156]) {
     const shelf = document.createElementNS(svg.namespaceURI, "polyline");
     shelf.setAttribute("points", `${84},${y} 210,${y - 60} 336,${y}`);
@@ -1425,6 +1446,7 @@ export async function mountNurseryApp(
         });
         if (Number(plantGroup.dataset.plantId) === selectedPlantId) {
           plantGroup.setAttribute("aria-pressed", "true");
+          plantGroup.dataset.selected = "true";
         }
       }
       scene.replaceChildren(sceneTitle, sceneSvg);
@@ -1434,10 +1456,10 @@ export async function mountNurseryApp(
           selectedPlantId = plantId;
           void inspectPlant(plantId);
         },
-        onWater: (plantId, waterKg) => void runCommand("nursery.water", {
-          plant_id: plantId,
-          water_kg: waterKg,
-        }),
+        onWater: (plantId, waterKg) => {
+          result = `Watering plant ${plantId}...`;
+          void runCommand("nursery.water", { plant_id: plantId, water_kg: waterKg });
+        },
         onSell: (plantId) => void runCommand("shop.sell_plant", { plant_id: plantId }),
         onProtect: (plantId) => void runCommand("nursery.protect", { plant_id: plantId }),
         onUnprotect: (plantId) => void runCommand("nursery.unprotect", { plant_id: plantId }),
