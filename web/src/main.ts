@@ -156,6 +156,13 @@ export function renderNurseryScene(plants: PlantSummary[]): SVGSVGElement {
   outdoorLabel.textContent = "OUTDOOR BEDS";
   svg.append(outdoorLabel);
 
+  const zoneShade = document.createElementNS(svg.namespaceURI, "polygon");
+  zoneShade.setAttribute("points", "238,86 360,126 238,196 116,156");
+  zoneShade.setAttribute("fill", "#d8e7c9");
+  zoneShade.setAttribute("opacity", "0.48");
+  zoneShade.setAttribute("aria-hidden", "true");
+  svg.append(zoneShade);
+
   for (const y of [96, 126, 156]) {
     const shelf = document.createElementNS(svg.namespaceURI, "polyline");
     shelf.setAttribute("points", `${84},${y} 210,${y - 60} 336,${y}`);
@@ -168,16 +175,26 @@ export function renderNurseryScene(plants: PlantSummary[]): SVGSVGElement {
 
   const ordered = [...plants].sort((left, right) => left.plant_id - right.plant_id);
   for (const [index, plant] of ordered.entries()) {
+    const isGreenhouse = plant.site_id.toLowerCase().includes("green");
     const column = index % 4;
     const row = Math.floor(index / 4);
-    const isoX = 116 + column * 48 - Math.min(row, 3) * 28;
-    const isoY = 130 + column * 18 + Math.min(row, 3) * 24;
+    const isoX = (isGreenhouse ? 92 : 268) + column * 34 - Math.min(row, 3) * 20;
+    const isoY = (isGreenhouse ? 112 : 142) + column * 14 + Math.min(row, 3) * 20;
     const height = Math.max(24, Math.min(92, plant.stem_length_m * 280));
     const canopy = Math.max(12, Math.min(36, plant.leaf_area_m2 * 380));
     const stress = Math.min(1, plant.water_stress_factor, plant.nutrient_stress_factor);
-    const leafColor = plant.alive
-      ? `rgb(${Math.round(80 + (1 - stress) * 100)}, ${Math.round(120 + stress * 90)}, 70)`
-      : "#6f6759";
+    const speciesColor: Record<string, string> = {
+      ocimum_basilicum: "#4e8b52",
+      solanum_lycopersicum: "#5d9145",
+      ficus_benjamina: "#2e6b49",
+      crassula_ovata: "#789f62",
+      juniperus_procumbens: "#3d765d",
+      quercus_robur: "#557d3e",
+    };
+    const healthyColor = speciesColor[plant.species_id] ?? "#568451";
+    const leafColor = plant.alive ? healthyColor : "#6f6759";
+    const leafScale = plant.species_id.includes("crassula") ? 1.25 :
+      plant.species_id.includes("juniper") ? 0.72 : 1;
 
     const group = document.createElementNS(svg.namespaceURI, "g");
     group.setAttribute("data-plant-id", String(plant.plant_id));
@@ -236,7 +253,7 @@ export function renderNurseryScene(plants: PlantSummary[]): SVGSVGElement {
       ) as SVGEllipseElement;
       leaves.setAttribute("cx", String(isoX + 8 + dx));
       leaves.setAttribute("cy", String(isoY - height + dy));
-      leaves.setAttribute("rx", String(canopy * scale));
+       leaves.setAttribute("rx", String(canopy * scale * leafScale));
       leaves.setAttribute("ry", String(Math.max(7, canopy * 0.44 * scale)));
       leaves.setAttribute("fill", leafColor);
       leaves.setAttribute("stroke", plant.alive ? "#466b31" : "#5f584c");
