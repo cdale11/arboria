@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-09-14 — Server-backed water recommendation
+
+- Added authenticated `/api/v1/plants/{id}/water-recommendation`, bounded by
+  root-zone capacity, reservoir supply, and the existing command limit.
+- Added client parsing and inspection display for the reason, suggested mL, and
+  tank use. The target policy is explicitly labelled provisional.
+
+Verification: 44 server app tests, Ruff, mypy, TypeScript check, and 31 frontend tests passed.
+
 ## 2026-09-14 — UI-04 nursery camera controls
 
 - Added bounded zoom/reset controls, wheel zoom, and pointer pan to the nursery

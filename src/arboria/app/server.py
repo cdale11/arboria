@@ -38,6 +38,7 @@ from arboria.sim.nursery import (
     MAX_WATER_PER_COMMAND_KG,
     NURSERY_SCHEMA_VERSION,
     STARTER_RESERVOIR_KG,
+    ZONE_CAPACITY_KG,
     add_starter_plant,
     advance_nursery,
     load_nursery_state,
@@ -1273,6 +1274,47 @@ def create_app() -> FastAPI:
                 "plants": plants,
             }
         )
+
+    @app.get("/api/v1/plants/{plant_id}/water-recommendation")
+    def water_recommendation(request: Request, plant_id: int) -> Response:
+        if not is_authenticated(request):
+            return JSONResponse({"detail": "authentication required"}, status_code=401)
+        require_world_metadata()
+        loop = tick_world()
+        projection = next(
+            (item for item in project_plants(
+                nursery_organs, nursery_zones, nursery_nutrient_zones, nursery_species
+            ) if item.plant_id == plant_id),
+            None,
+        )
+        if projection is None:
+            return JSONResponse({"detail": "unknown plant"}, status_code=404)
+        target_fraction = (0.90 - 0.35) / 0.65
+        target_water = ZONE_CAPACITY_KG * target_fraction
+        needed = max(0.0, target_water - projection.zone_water_kg)
+        free_capacity = max(0.0, ZONE_CAPACITY_KG - projection.zone_water_kg)
+        suggested = min(needed, free_capacity, nursery_reservoir_kg, MAX_WATER_PER_COMMAND_KG)
+        reason = (
+            "watering not needed"
+            if suggested == 0.0
+            else "root-zone water below provisional target"
+        )
+        if nursery_reservoir_kg <= 0.0:
+            reason = "reservoir is empty"
+        elif free_capacity <= 0.0:
+            reason = "root zone is at capacity"
+        return JSONResponse({
+            "revision": loop.world_revision,
+            "plant_id": plant_id,
+            "suggested_water_kg": suggested,
+            "suggested_water_ml": round(suggested * 1000.0),
+            "current_water_kg": projection.zone_water_kg,
+            "target_water_kg": target_water,
+            "available_reservoir_kg": nursery_reservoir_kg,
+            "free_capacity_kg": free_capacity,
+            "reason": reason,
+            "policy_version": "r1-provisional-water-target-1",
+        })
 
     @app.get("/api/v1/plants/{plant_id}")
     def plant_detail(request: Request, plant_id: int) -> Response:

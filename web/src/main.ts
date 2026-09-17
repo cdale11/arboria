@@ -746,6 +746,19 @@ export interface PlantDetail {
   organs: PlantOrgan[];
 }
 
+export interface WaterRecommendation {
+  revision: number;
+  plant_id: number;
+  suggested_water_kg: number;
+  suggested_water_ml: number;
+  current_water_kg: number;
+  target_water_kg: number;
+  available_reservoir_kg: number;
+  free_capacity_kg: number;
+  reason: string;
+  policy_version: string;
+}
+
 export interface SaveSnapshot {
   name: string;
 }
@@ -770,6 +783,7 @@ export interface CompanionStatus {
 export interface NurseryClient {
   load(): Promise<NurseryApi>;
   inspect(plantId: number): Promise<PlantDetail>;
+  waterRecommendation?: (plantId: number) => Promise<WaterRecommendation>;
   sendCommand(kind: string, payload: Record<string, unknown>): Promise<CommandReceipt>;
   pauseClock(): Promise<void>;
   resumeClock(): Promise<void>;
@@ -981,6 +995,18 @@ export function createApiClient(
     async inspect(plantId: number): Promise<PlantDetail> {
       return parseDetail(await getJson(`/api/v1/plants/${plantId}`));
     },
+    async waterRecommendation(plantId: number): Promise<WaterRecommendation> {
+      const payload = await getJson(`/api/v1/plants/${plantId}/water-recommendation`);
+      if (!isRecord(payload) || typeof payload["reason"] !== "string" || typeof payload["policy_version"] !== "string") {
+        throw new Error("unexpected water recommendation shape");
+      }
+      const numeric = ["revision", "plant_id", "suggested_water_kg", "suggested_water_ml", "current_water_kg", "target_water_kg", "available_reservoir_kg", "free_capacity_kg"];
+      if (numeric.some((key) => toNumber(payload[key]) === null)) throw new Error("unexpected water recommendation shape");
+      return Object.fromEntries([
+        ...numeric.map((key) => [key, payload[key]]),
+        ["reason", payload["reason"]], ["policy_version", payload["policy_version"]],
+      ]) as unknown as WaterRecommendation;
+    },
     async sendCommand(kind, payload): Promise<CommandReceipt> {
       const headers = csrfHeaders();
       const world = await getJson("/api/v1/world");
@@ -1105,6 +1131,7 @@ export interface ControlContext {
   exportArchive: string;
   companion: CompanionStatus;
   saveNameDraft?: string;
+  recommendation?: WaterRecommendation | null;
 }
 
 function actionButton(
@@ -1203,6 +1230,12 @@ export function renderControlPanel(
       ),
     );
     row.append(plantHeading, plantSummary, actions);
+    if (context.recommendation?.plant_id === plant.plant_id) {
+      const recommendation = document.createElement("p");
+      recommendation.dataset.action = "water-recommendation";
+      recommendation.textContent = `${context.recommendation.reason}. Suggested ${context.recommendation.suggested_water_ml} mL; tank use ${formatWaterVolume(context.recommendation.suggested_water_kg)}.`;
+      row.append(recommendation);
+    }
     care.append(row);
   }
   const picker = document.createElement("nav");
@@ -1405,6 +1438,7 @@ export async function mountNurseryApp(
   let detail: PlantDetail | null = null;
   let selectedPlantId: number | null = null;
   let saveNameDraft = "";
+  let recommendation: WaterRecommendation | null = null;
   let activeSection = "nursery";
   let result: string | null = null;
   let exportArchive = "";
@@ -1520,6 +1554,7 @@ export async function mountNurseryApp(
         plants: api.plants,
         selectedPlantId,
         saveNameDraft,
+        recommendation,
         demand: api.world.nursery.demand_remaining,
         saves,
         detail,
@@ -1537,8 +1572,12 @@ export async function mountNurseryApp(
   async function inspectPlant(plantId: number): Promise<void> {
     try {
       detail = await client.inspect(plantId);
+      recommendation = client.waterRecommendation === undefined
+        ? null
+        : await client.waterRecommendation(plantId);
       result = `Inspecting plant ${plantId}.`;
     } catch (error) {
+      recommendation = null;
       result = error instanceof Error ? error.message : "unknown error";
     }
     await refresh();
